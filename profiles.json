@@ -1,0 +1,667 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-08",
+  "source": "backoffice calibration output",
+  "status": "calibration_review",
+  "notes": "Initial contract only. Values are exploratory frontend defaults, not validated or optimized.",
+  "pairs": {
+    "USD/CHF": {
+      "profile_version": 1,
+      "status": "exploratory",
+      "parameters": {
+        "aroon": 25,
+        "stochastic_period": 14,
+        "stochastic_smoothing": 3,
+        "efficiency_period": 20
+      },
+      "stable_ranges": {
+        "aroon": [
+          22,
+          22
+        ],
+        "stochastic_period": null,
+        "stochastic_smoothing": null,
+        "efficiency_period": null
+      },
+      "calibration": {
+        "training_window": "1999-12-30/2025-12-31",
+        "validation_windows": [
+          "2021",
+          "2022",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        "score": 0.06931307935157621,
+        "neighbor_stability": {
+          "stable_range": [
+            22,
+            22
+          ],
+          "current_inside_stable_range": false,
+          "walk_forward_period_span": 0
+        },
+        "walk_forward_consistency": 0.6,
+        "decision": "KEEP_CURRENT",
+        "candidate_parameters": {
+          "aroon": 22,
+          "stochastic_period": 14,
+          "stochastic_smoothing": 3,
+          "efficiency_period": 20
+        },
+        "minimum_improvement_required": {
+          "absolute": 0.01,
+          "relative": 0.1
+        },
+        "aroon_research": {
+          "current_period": 25,
+          "candidate_period": 22,
+          "stable_range": [
+            22,
+            22
+          ],
+          "current_validation_score": 0.10866635009178124,
+          "candidate_validation_score": 0.06931307935157621,
+          "absolute_improvement": -0.03935327074020503,
+          "relative_improvement": -0.36214771828598885,
+          "sign_consistency": 0.6,
+          "observed_relation": "continuation",
+          "walk_forward_period_span": 0,
+          "validation_fold_count": 5,
+          "decision": "KEEP_CURRENT",
+          "decision_reason": "Absolute validation improvement is below the review threshold.",
+          "folds": [
+            {
+              "validation_year": 2021,
+              "selected_period": 22,
+              "training_correlation": -0.02911668,
+              "validation_correlation": -0.03726418,
+              "validation_samples": 253
+            },
+            {
+              "validation_year": 2022,
+              "selected_period": 22,
+              "training_correlation": -0.02810618,
+              "validation_correlation": -0.14660842,
+              "validation_samples": 252
+            },
+            {
+              "validation_year": 2023,
+              "selected_period": 22,
+              "training_correlation": -0.03259127,
+              "validation_correlation": 0.0966898,
+              "validation_samples": 250
+            },
+            {
+              "validation_year": 2024,
+              "selected_period": 22,
+              "training_correlation": -0.02854233,
+              "validation_correlation": 0.04729545,
+              "validation_samples": 251
+            },
+            {
+              "validation_year": 2025,
+              "selected_period": 22,
+              "training_correlation": -0.02559566,
+              "validation_correlation": 0.01870756,
+              "validation_samples": 250
+            }
+          ]
+        },
+        "decision_reason": "Absolute validation improvement is below the review threshold."
+      }
+    },
+    "USD/EUR": {
+      "profile_version": 1,
+      "status": "exploratory",
+      "parameters": {
+        "aroon": 25,
+        "stochastic_period": 14,
+        "stochastic_smoothing": 3,
+        "efficiency_period": 20
+      },
+      "stable_ranges": {
+        "aroon": [
+          55,
+          56
+        ],
+        "stochastic_period": null,
+        "stochastic_smoothing": null,
+        "efficiency_period": null
+      },
+      "calibration": {
+        "training_window": "1999-12-30/2025-12-31",
+        "validation_windows": [
+          "2021",
+          "2022",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        "score": 0.07920903709570368,
+        "neighbor_stability": {
+          "stable_range": [
+            55,
+            56
+          ],
+          "current_inside_stable_range": false,
+          "walk_forward_period_span": 0
+        },
+        "walk_forward_consistency": 0.6,
+        "decision": "KEEP_CURRENT",
+        "candidate_parameters": {
+          "aroon": 56,
+          "stochastic_period": 14,
+          "stochastic_smoothing": 3,
+          "efficiency_period": 20
+        },
+        "minimum_improvement_required": {
+          "absolute": 0.01,
+          "relative": 0.1
+        },
+        "aroon_research": {
+          "current_period": 25,
+          "candidate_period": 56,
+          "stable_range": [
+            55,
+            56
+          ],
+          "current_validation_score": 0.05980767570489518,
+          "candidate_validation_score": 0.07920903709570368,
+          "absolute_improvement": 0.019401361390808496,
+          "relative_improvement": 0.3243958432114846,
+          "sign_consistency": 0.6,
+          "observed_relation": "reversion",
+          "walk_forward_period_span": 0,
+          "validation_fold_count": 5,
+          "decision": "KEEP_CURRENT",
+          "decision_reason": "Forward relationship changes sign too often across validation years.",
+          "folds": [
+            {
+              "validation_year": 2021,
+              "selected_period": 56,
+              "training_correlation": 0.03847093,
+              "validation_correlation": -0.12455894,
+              "validation_samples": 253
+            },
+            {
+              "validation_year": 2022,
+              "selected_period": 56,
+              "training_correlation": 0.03791172,
+              "validation_correlation": 0.10614382,
+              "validation_samples": 252
+            },
+            {
+              "validation_year": 2023,
+              "selected_period": 56,
+              "training_correlation": 0.04257538,
+              "validation_correlation": -0.14478817,
+              "validation_samples": 250
+            },
+            {
+              "validation_year": 2024,
+              "selected_period": 56,
+              "training_correlation": 0.03725144,
+              "validation_correlation": -0.0198726,
+              "validation_samples": 251
+            },
+            {
+              "validation_year": 2025,
+              "selected_period": 56,
+              "training_correlation": 0.03490644,
+              "validation_correlation": 0.00068165,
+              "validation_samples": 250
+            }
+          ]
+        },
+        "decision_reason": "Forward relationship changes sign too often across validation years."
+      }
+    },
+    "USD/JPY": {
+      "profile_version": 1,
+      "status": "exploratory",
+      "parameters": {
+        "aroon": 25,
+        "stochastic_period": 14,
+        "stochastic_smoothing": 3,
+        "efficiency_period": 20
+      },
+      "stable_ranges": {
+        "aroon": [
+          60,
+          60
+        ],
+        "stochastic_period": null,
+        "stochastic_smoothing": null,
+        "efficiency_period": null
+      },
+      "calibration": {
+        "training_window": "1999-12-30/2025-12-31",
+        "validation_windows": [
+          "2021",
+          "2022",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        "score": 0.08643231983876994,
+        "neighbor_stability": {
+          "stable_range": [
+            60,
+            60
+          ],
+          "current_inside_stable_range": false,
+          "walk_forward_period_span": 24
+        },
+        "walk_forward_consistency": 0.6,
+        "decision": "EXPAND_SEARCH",
+        "candidate_parameters": {
+          "aroon": 60,
+          "stochastic_period": 14,
+          "stochastic_smoothing": 3,
+          "efficiency_period": 20
+        },
+        "minimum_improvement_required": {
+          "absolute": 0.01,
+          "relative": 0.1
+        },
+        "aroon_research": {
+          "current_period": 25,
+          "candidate_period": 60,
+          "stable_range": [
+            60,
+            60
+          ],
+          "current_validation_score": 0.034717482260010965,
+          "candidate_validation_score": 0.08643231983876994,
+          "absolute_improvement": 0.05171483757875897,
+          "relative_improvement": 1.4895906676483353,
+          "sign_consistency": 0.6,
+          "observed_relation": "reversion",
+          "walk_forward_period_span": 24,
+          "validation_fold_count": 5,
+          "decision": "EXPAND_SEARCH",
+          "decision_reason": "Best candidate sits on the search boundary; the tested range may be too narrow.",
+          "folds": [
+            {
+              "validation_year": 2021,
+              "selected_period": 36,
+              "training_correlation": -0.04068591,
+              "validation_correlation": -0.13950978,
+              "validation_samples": 253
+            },
+            {
+              "validation_year": 2022,
+              "selected_period": 36,
+              "training_correlation": -0.03925447,
+              "validation_correlation": 0.08262325,
+              "validation_samples": 252
+            },
+            {
+              "validation_year": 2023,
+              "selected_period": 60,
+              "training_correlation": 0.04460257,
+              "validation_correlation": -0.01655994,
+              "validation_samples": 250
+            },
+            {
+              "validation_year": 2024,
+              "selected_period": 60,
+              "training_correlation": 0.04423415,
+              "validation_correlation": -0.08060401,
+              "validation_samples": 251
+            },
+            {
+              "validation_year": 2025,
+              "selected_period": 60,
+              "training_correlation": 0.03941592,
+              "validation_correlation": 0.05856148,
+              "validation_samples": 250
+            }
+          ]
+        },
+        "decision_reason": "Best candidate sits on the search boundary; the tested range may be too narrow."
+      }
+    },
+    "EUR/CHF": {
+      "profile_version": 1,
+      "status": "exploratory",
+      "parameters": {
+        "aroon": 25,
+        "stochastic_period": 14,
+        "stochastic_smoothing": 3,
+        "efficiency_period": 20
+      },
+      "stable_ranges": {
+        "aroon": [
+          34,
+          36
+        ],
+        "stochastic_period": null,
+        "stochastic_smoothing": null,
+        "efficiency_period": null
+      },
+      "calibration": {
+        "training_window": "1999-12-30/2025-12-31",
+        "validation_windows": [
+          "2021",
+          "2022",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        "score": 0.16708956787622975,
+        "neighbor_stability": {
+          "stable_range": [
+            34,
+            36
+          ],
+          "current_inside_stable_range": false,
+          "walk_forward_period_span": 7
+        },
+        "walk_forward_consistency": 0.8,
+        "decision": "KEEP_CURRENT",
+        "candidate_parameters": {
+          "aroon": 35,
+          "stochastic_period": 14,
+          "stochastic_smoothing": 3,
+          "efficiency_period": 20
+        },
+        "minimum_improvement_required": {
+          "absolute": 0.01,
+          "relative": 0.1
+        },
+        "aroon_research": {
+          "current_period": 25,
+          "candidate_period": 35,
+          "stable_range": [
+            34,
+            36
+          ],
+          "current_validation_score": 0.18268077798252133,
+          "candidate_validation_score": 0.16708956787622975,
+          "absolute_improvement": -0.015591210106291581,
+          "relative_improvement": -0.08534674681417947,
+          "sign_consistency": 0.8,
+          "observed_relation": "reversion",
+          "walk_forward_period_span": 7,
+          "validation_fold_count": 5,
+          "decision": "KEEP_CURRENT",
+          "decision_reason": "Absolute validation improvement is below the review threshold.",
+          "folds": [
+            {
+              "validation_year": 2021,
+              "selected_period": 42,
+              "training_correlation": -0.04249078,
+              "validation_correlation": 0.0341201,
+              "validation_samples": 253
+            },
+            {
+              "validation_year": 2022,
+              "selected_period": 42,
+              "training_correlation": -0.03986704,
+              "validation_correlation": -0.15144366,
+              "validation_samples": 252
+            },
+            {
+              "validation_year": 2023,
+              "selected_period": 36,
+              "training_correlation": -0.04694174,
+              "validation_correlation": -0.26307266,
+              "validation_samples": 250
+            },
+            {
+              "validation_year": 2024,
+              "selected_period": 36,
+              "training_correlation": -0.05270203,
+              "validation_correlation": -0.09265128,
+              "validation_samples": 251
+            },
+            {
+              "validation_year": 2025,
+              "selected_period": 35,
+              "training_correlation": -0.05351927,
+              "validation_correlation": -0.21432238,
+              "validation_samples": 250
+            }
+          ]
+        },
+        "decision_reason": "Absolute validation improvement is below the review threshold."
+      }
+    },
+    "EUR/JPY": {
+      "profile_version": 1,
+      "status": "exploratory",
+      "parameters": {
+        "aroon": 25,
+        "stochastic_period": 14,
+        "stochastic_smoothing": 3,
+        "efficiency_period": 20
+      },
+      "stable_ranges": {
+        "aroon": [
+          31,
+          31
+        ],
+        "stochastic_period": null,
+        "stochastic_smoothing": null,
+        "efficiency_period": null
+      },
+      "calibration": {
+        "training_window": "1999-12-30/2025-12-31",
+        "validation_windows": [
+          "2021",
+          "2022",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        "score": 0.11231832536975658,
+        "neighbor_stability": {
+          "stable_range": [
+            31,
+            31
+          ],
+          "current_inside_stable_range": false,
+          "walk_forward_period_span": 29
+        },
+        "walk_forward_consistency": 1.0,
+        "decision": "KEEP_CURRENT",
+        "candidate_parameters": {
+          "aroon": 31,
+          "stochastic_period": 14,
+          "stochastic_smoothing": 3,
+          "efficiency_period": 20
+        },
+        "minimum_improvement_required": {
+          "absolute": 0.01,
+          "relative": 0.1
+        },
+        "aroon_research": {
+          "current_period": 25,
+          "candidate_period": 31,
+          "stable_range": [
+            31,
+            31
+          ],
+          "current_validation_score": 0.07877186150161503,
+          "candidate_validation_score": 0.11231832536975658,
+          "absolute_improvement": 0.03354646386814156,
+          "relative_improvement": 0.4258686189287753,
+          "sign_consistency": 1.0,
+          "observed_relation": "reversion",
+          "walk_forward_period_span": 29,
+          "validation_fold_count": 5,
+          "decision": "KEEP_CURRENT",
+          "decision_reason": "Walk-forward selected periods move too widely to call the parameter base stable.",
+          "folds": [
+            {
+              "validation_year": 2021,
+              "selected_period": 10,
+              "training_correlation": -0.04127077,
+              "validation_correlation": 0.03640095,
+              "validation_samples": 253
+            },
+            {
+              "validation_year": 2022,
+              "selected_period": 10,
+              "training_correlation": -0.03937172,
+              "validation_correlation": -0.12721754,
+              "validation_samples": 252
+            },
+            {
+              "validation_year": 2023,
+              "selected_period": 10,
+              "training_correlation": -0.0427675,
+              "validation_correlation": 0.01241548,
+              "validation_samples": 250
+            },
+            {
+              "validation_year": 2024,
+              "selected_period": 39,
+              "training_correlation": -0.04050597,
+              "validation_correlation": -0.0496277,
+              "validation_samples": 251
+            },
+            {
+              "validation_year": 2025,
+              "selected_period": 31,
+              "training_correlation": -0.0410323,
+              "validation_correlation": -0.02633349,
+              "validation_samples": 250
+            }
+          ]
+        },
+        "decision_reason": "Walk-forward selected periods move too widely to call the parameter base stable."
+      }
+    },
+    "CHF/JPY": {
+      "profile_version": 1,
+      "status": "exploratory",
+      "parameters": {
+        "aroon": 25,
+        "stochastic_period": 14,
+        "stochastic_smoothing": 3,
+        "efficiency_period": 20
+      },
+      "stable_ranges": {
+        "aroon": [
+          40,
+          41
+        ],
+        "stochastic_period": null,
+        "stochastic_smoothing": null,
+        "efficiency_period": null
+      },
+      "calibration": {
+        "training_window": "1999-12-30/2025-12-31",
+        "validation_windows": [
+          "2021",
+          "2022",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        "score": 0.15381667913180264,
+        "neighbor_stability": {
+          "stable_range": [
+            40,
+            41
+          ],
+          "current_inside_stable_range": false,
+          "walk_forward_period_span": 30
+        },
+        "walk_forward_consistency": 0.8,
+        "decision": "KEEP_CURRENT",
+        "candidate_parameters": {
+          "aroon": 40,
+          "stochastic_period": 14,
+          "stochastic_smoothing": 3,
+          "efficiency_period": 20
+        },
+        "minimum_improvement_required": {
+          "absolute": 0.01,
+          "relative": 0.1
+        },
+        "aroon_research": {
+          "current_period": 25,
+          "candidate_period": 40,
+          "stable_range": [
+            40,
+            41
+          ],
+          "current_validation_score": 0.07962116399148159,
+          "candidate_validation_score": 0.15381667913180264,
+          "absolute_improvement": 0.07419551514032105,
+          "relative_improvement": 0.9318567001640291,
+          "sign_consistency": 0.8,
+          "observed_relation": "reversion",
+          "walk_forward_period_span": 30,
+          "validation_fold_count": 5,
+          "decision": "KEEP_CURRENT",
+          "decision_reason": "Walk-forward selected periods move too widely to call the parameter base stable.",
+          "folds": [
+            {
+              "validation_year": 2021,
+              "selected_period": 11,
+              "training_correlation": -0.05488934,
+              "validation_correlation": -0.03944589,
+              "validation_samples": 253
+            },
+            {
+              "validation_year": 2022,
+              "selected_period": 40,
+              "training_correlation": -0.05437028,
+              "validation_correlation": -0.01358161,
+              "validation_samples": 252
+            },
+            {
+              "validation_year": 2023,
+              "selected_period": 10,
+              "training_correlation": -0.05500295,
+              "validation_correlation": -0.02401151,
+              "validation_samples": 250
+            },
+            {
+              "validation_year": 2024,
+              "selected_period": 11,
+              "training_correlation": -0.05387064,
+              "validation_correlation": 0.08157947,
+              "validation_samples": 251
+            },
+            {
+              "validation_year": 2025,
+              "selected_period": 40,
+              "training_correlation": -0.05470842,
+              "validation_correlation": 0.13823081,
+              "validation_samples": 250
+            }
+          ]
+        },
+        "decision_reason": "Walk-forward selected periods move too widely to call the parameter base stable."
+      }
+    }
+  },
+  "calibration_method": {
+    "version": "aroon_walk_forward_v2",
+    "source_start_requested": "2000-01-01",
+    "first_observation": "1999-12-30",
+    "last_observation": "2026-10-07",
+    "forward_horizon_observations": 5,
+    "validation_years": 5,
+    "aroon_period_range": [
+      10,
+      60
+    ],
+    "plateau_fraction": 0.975,
+    "score": "absolute Pearson correlation between Aroon oscillator and forward log return; correlation sign retained",
+    "promotion": "none; candidates are flagged for review only",
+    "review_thresholds": {
+      "minimum_absolute_correlation_improvement": 0.01,
+      "minimum_relative_improvement": 0.1,
+      "minimum_sign_consistency": 0.8,
+      "maximum_walk_forward_period_span": 15,
+      "minimum_validation_folds": 4
+    }
+  }
+}
