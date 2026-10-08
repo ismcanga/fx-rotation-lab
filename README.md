@@ -78,3 +78,80 @@ A locked profile freezes the parameter values only. New market observations cont
 ## Retrieval status
 
 The page stores the timestamp of the last successful data fetch separately from the time an analysis packet is generated. If a later refresh fails, retained charts remain visible and the status says that older successfully retrieved data is still being shown.
+
+## Granularity-aware calibration research
+
+`backoffice/calibrate.py` writes a separate v4 research artifact. It reads
+`profiles.json` only as a reference for the existing daily active period; it does
+not rewrite the file, its schema, or active parameter metadata. Coarse research
+has no active-period comparator. Candidates are never automatically promoted.
+
+Run against an archived snapshot without network access:
+
+```sh
+python3 -B backoffice/calibrate.py \
+  --as-of 2025-12-31 \
+  --snapshot backoffice/artifacts/ecb_daily_2025-12-31.json \
+  --output backoffice/artifacts/aroon_research_2025-12-31.json
+```
+
+`--as-of` is required and must name a completed historical year end. `--start`
+defaults to `2000-01-01`; source rows outside that closed date interval are
+excluded before aggregation. Omit `--snapshot` to fetch and archive ECB data.
+New source filenames include a content-hash suffix; an existing source snapshot
+is never replaced. Optional `--pairs USD/CHF` and `--granularities 1D 1W` bound
+a research run. Each output is a standalone artifact, not a merge into earlier
+research; use different output paths to retain multiple runs.
+
+Each `(pair, granularity)` is researched separately. These initial policies are
+declared in `GRANULARITY_POLICIES`, not fitted to the resulting scores:
+
+| Granularity | Aroon range | Forward observations | Minimum training / validation samples | Validation folds | Minimum usable folds |
+|---|---:|---:|---:|---|---:|
+| 1D | 10–60 | 5 daily | 120 / 120 | 5 × 1 year | 4 |
+| 1W | 4–26 | 5 weekly | 104 / 40 | 5 × 1 year | 4 |
+| 1M | 3–18 | 5 monthly | 96 / 24 | 5 × 3 years | 4 |
+| 1Q | 4–12 | 4 quarterly | 60 / 20 | 3 × 6 years | 3 |
+
+Counts refer to eligible targets after indicator warmup and endpoint-boundary
+exclusion. Monthly and quarterly annual folds would have too few observations;
+longer, nonoverlapping calendar blocks are explicit policy. Training expands up
+to the day before each block. Period and correlation direction are selected
+using training data only, with contiguous same-sign near-best plateaus and the
+lower integer midpoint. No target endpoint can cross a training or validation
+boundary; pre-window data can supply indicator warmup.
+
+Candles and Aroon reuse `aroon_events.py`. Candle OHLC is calculated from daily
+reference observations, not market OHLC, and signals use candle closes only.
+For calibration, each coarse close becomes available at calendar period end
+(Sunday for ISO weeks). Unfinished buckets are excluded at the cutoff. Reference
+dates and availability dates are retained separately, preventing a December
+reference in a week ending in January from entering December training. Calendar
+completion assumes the supplied daily source is complete; it does not prove
+that no ECB releases are missing or establish an executable fill time.
+
+The objective remains the v3 Pearson correlation of close-based Aroon oscillator
+with a forward endpoint log return. This migration does **not** optimize
+transition events, stochastic confirmation, or 0.5% target-hit rates. Event
+excursions remain a separate experiment using intervening daily observations.
+
+Results live at `research.pairs[PAIR].granularities[GRANULARITY]`, with policy,
+score grid, fold boundaries, diagnostics, flags, and `promotion: "none"`.
+Insufficient full-sample or walk-forward evidence yields `candidate_period: null`
+and `status: "insufficient_evidence"`; unscored periods and folds remain visible.
+Any full-sample plateau retained in this case is a retrospective diagnostic only.
+An emitted candidate is a research proposal, not proof of advantage. Walk-forward
+scores evaluate the selection procedure, not the final full-sample period.
+Overlapping targets are dependent; the sample gates are not significance tests.
+
+Artifacts retain the explicit cutoff, requested source start, first/last included
+observations, original snapshot path and SHA256, read-only profile hash,
+implementation hashes, and policies. The manual GitHub workflow requires a cutoff
+and uploads research and source artifacts, without committing or promoting them.
+
+Validation commands:
+
+```sh
+python3 -B backoffice/fixtures.py
+python3 -B -m unittest discover -s backoffice -p 'test_*.py'
+```

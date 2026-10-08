@@ -70,7 +70,7 @@
     .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
     .panel { padding: 14px; }
     .price h2, .indicator-wide h2 { margin-bottom: 2px; }
-    .summary, .packet, .moves { grid-column: 1 / -1; }
+    .summary, .packet { grid-column: 1 / -1; }
     .price, .indicator-wide { grid-column: span 6; min-width: 0; }
 
     .heroPair { font-size: 30px; font-weight: 800; letter-spacing: -.03em; }
@@ -92,6 +92,9 @@
     .contextCell span { color: var(--muted); font-size: 11px; }
 
     .profileState { margin-top: 12px; color: var(--muted); font-size: 12px; }
+    .researchClean { color: var(--good); }
+    .researchFlagged { color: var(--warn); }
+    .researchInsufficient { color: var(--muted); }
     .locked { color: var(--warn); }
     .paramError { flex-basis: 100%; min-height: 1.2em; color: var(--bad); font-size: 12px; }
     input.invalid { border-color: var(--bad); }
@@ -138,17 +141,6 @@
     }
     .packetActions { display: flex; gap: 8px; margin-top: 10px; }
 
-    .formgrid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 8px;
-      margin-top: 12px;
-    }
-    .formgrid textarea { grid-column: span 2; resize: vertical; min-height: 40px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
-    th, td { padding: 9px 8px; border-top: 1px solid var(--line); text-align: left; }
-    th { color: var(--muted); font-weight: 600; }
-
     .foot { color: var(--muted); font-size: 12px; margin-top: 18px; line-height: 1.55; }
     .pos { color: var(--good); }
     .neg { color: var(--bad); }
@@ -162,8 +154,6 @@
     @media (max-width: 900px) {
       .price, .indicator-wide { grid-column: 1 / -1; }
       .contextStrip { grid-template-columns: repeat(2, 1fr); }
-      .formgrid { grid-template-columns: 1fr 1fr; }
-      .formgrid textarea { grid-column: 1 / -1; }
       header { align-items: flex-start; flex-direction: column; }
       .status { text-align: left; }
     }
@@ -182,6 +172,15 @@
   <section class="controls">
     <label>Pair
       <select id="pairSelect"></select>
+    </label>
+
+    <label>Granularity
+      <select id="granularitySelect">
+        <option value="1D">1D</option>
+        <option value="1W">1W</option>
+        <option value="1M">1M</option>
+        <option value="1Q">1Q</option>
+      </select>
     </label>
 
     <label>History
@@ -232,11 +231,14 @@
       <p class="legend">Peer context stays small: it helps show whether the selected move is broad or mostly isolated to this pair.</p>
       <div class="contextStrip" id="contextStrip"></div>
       <div class="profileState" id="profileState"></div>
+      <div class="profileState" id="researchState"></div>
     </section>
 
     <section class="panel price">
       <h2 id="priceTitle">Pair history</h2>
-      <p class="legend">What happened to the exchange rate.</p>
+      <p class="legend">
+        Daily: ECB reference-rate line. Weekly, monthly and quarterly: ranges of daily ECB reference observations; left tick = first observation, right tick = last observation.
+      </p>
       <div class="chartBox"><canvas id="priceChart"></canvas></div>
     </section>
 
@@ -248,7 +250,7 @@
 
     <section class="panel indicator-wide">
       <h2>Range position <span class="neutral">(stochastic)</span></h2>
-      <p class="legend">Shows where today's rate sits inside its recent range. Near 100 = near the top; near 0 = near the bottom. This FX version uses daily reference observations, not OHLC bars.</p>
+      <p class="legend">Shows where the selected granularity's closing reference rate sits inside its recent range. Coarse periods are derived from ECB daily reference observations; these are not intraday market OHLC quotes.</p>
       <div class="chartBox"><canvas id="stochChart"></canvas></div><p class="legend"><b>Read:</b> High = near the top of the recent range. Low = near the bottom. High does not automatically mean reversal.</p>
     </section>
 
@@ -266,32 +268,6 @@
         <button id="copyPacketBtn">Copy analysis packet</button>
       </div>
     </section>
-
-    <section class="panel moves">
-      <h2>Move journal</h2>
-      <p class="legend">Manual notes saved only in this browser.</p>
-
-      <form id="moveForm" class="formgrid">
-        <input id="moveDate" type="datetime-local" required />
-        <select id="moveFrom"><option>USD</option><option>CHF</option><option>EUR</option><option>JPY</option></select>
-        <select id="moveTo"><option>CHF</option><option>USD</option><option>EUR</option><option>JPY</option></select>
-        <input id="moveAmount" type="number" min="0" step="any" placeholder="Amount sold" required />
-        <input id="moveRate" type="number" min="0" step="any" placeholder="Executed rate" required />
-        <input id="moveFee" type="number" min="0" step="any" value="0" placeholder="Fee" />
-        <textarea id="moveNote" placeholder="Reason / note"></textarea>
-        <button type="submit">Add move</button>
-      </form>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Time</th><th>From</th><th>To</th><th>Amount sold</th>
-            <th>Rate</th><th>Fee</th><th>Note</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="moveRows"></tbody>
-      </table>
-    </section>
   </div>
 
   <p class="foot">Source: ECB reference rates via Frankfurter. Indicators describe recent price behaviour; they do not predict the next move. Reference rates are not executable broker quotes.</p>
@@ -300,13 +276,30 @@
 <script>
 const PAIRS = ["USD/CHF","USD/EUR","USD/JPY","EUR/CHF","EUR/JPY","CHF/JPY"];
 const CURRENCIES = ["EUR","USD","CHF","JPY"];
+const AROON_RESEARCH_URL =
+  "backoffice/artifacts/aroon_web_2025-12-31.json";
+
+let aroonResearch = null;
+let selectedGranularity = "1D";
 
 let rawSeries = {};
 let selectedPair = "USD/CHF";
 let charts = {};
 let lastFetchAt = null;
 
-const WARMUP_CALENDAR_DAYS = 260;
+const GRANULARITY_DAYS_PER_PERIOD = {
+  "1D": 2,
+  "1W": 9,
+  "1M": 35,
+  "1Q": 100
+};
+
+const MIN_WARMUP_DAYS = {
+  "1D": 260,
+  "1W": 1200,
+  "1M": 3000,
+  "1Q": 10000
+};
 const PARAM_LIMITS = {
   aroon: [5,120],
   stoch: [5,120],
@@ -339,11 +332,31 @@ function latestFinite(arr){
   return null;
 }
 
+async function loadAroonResearch(){
+  try {
+    const res = await fetch(AROON_RESEARCH_URL, {cache:"no-store"});
+
+    if(!res.ok){
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    aroonResearch = await res.json();
+  } catch(err) {
+    console.error("Aroon research load failed:", err);
+    aroonResearch = null;
+  }
+}
+
 async function fetchData(){
   const days = Number($("rangeSelect").value);
   $("status").textContent = "Loading ECB reference-rate history…";
 
-  const url = `https://api.frankfurter.dev/v2/rates?from=${dateDaysAgo(days+WARMUP_CALENDAR_DAYS)}&quotes=USD,CHF,JPY&providers=ecb`;
+  const warmupDays = requiredWarmupDays();
+
+  const url =
+    `https://api.frankfurter.dev/v2/rates?from=` +
+    `${dateDaysAgo(days + warmupDays)}` +
+    `&quotes=USD,CHF,JPY&providers=ecb`;
   const res = await fetch(url);
   if(!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -388,13 +401,126 @@ async function safeFetchData(){
   }
 }
 
-function visibleSeries(pair){
-  const days = Number($("rangeSelect").value);
-  const cutoff = dateDaysAgo(days);
-  return (rawSeries[pair] || []).filter(x => x.date >= cutoff);
+function periodKey(dateString, granularity){
+  const d = new Date(`${dateString}T00:00:00Z`);
+
+  if(granularity === "1D"){
+    return dateString;
+  }
+
+  if(granularity === "1M"){
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}`;
+  }
+
+  if(granularity === "1Q"){
+    const q = Math.floor(d.getUTCMonth()/3)+1;
+    return `${d.getUTCFullYear()}-Q${q}`;
+  }
+
+  if(granularity === "1W"){
+    const x = new Date(d);
+    const day = x.getUTCDay() || 7;
+    x.setUTCDate(x.getUTCDate() + 4 - day);
+
+    const yearStart = new Date(Date.UTC(x.getUTCFullYear(),0,1));
+    const week = Math.ceil(
+      (((x - yearStart) / 86400000) + 1) / 7
+    );
+
+    return `${x.getUTCFullYear()}-W${String(week).padStart(2,"0")}`;
+  }
+
+  throw new Error(`Unsupported granularity: ${granularity}`);
 }
 
-function profileKey(pair){ return "fxProfile:" + pair; }
+function periodIsComplete(dateString, granularity){
+  if(granularity === "1D") return true;
+
+  const d = new Date(`${dateString}T00:00:00Z`);
+  const now = new Date();
+  let nextPeriodStart;
+
+  if(granularity === "1W"){
+    const day = d.getUTCDay() || 7;
+    const monday = new Date(d);
+    monday.setUTCDate(d.getUTCDate() - (day - 1));
+
+    nextPeriodStart = new Date(monday);
+    nextPeriodStart.setUTCDate(monday.getUTCDate() + 7);
+  } else if(granularity === "1M"){
+    nextPeriodStart = new Date(
+      Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)
+    );
+  } else if(granularity === "1Q"){
+    const quarter = Math.floor(d.getUTCMonth() / 3);
+    nextPeriodStart = new Date(
+      Date.UTC(d.getUTCFullYear(), quarter * 3 + 3, 1)
+    );
+  } else {
+    return true;
+  }
+
+  return now >= nextPeriodStart;
+}
+
+function aggregateSeries(series, granularity){
+  if(granularity === "1D"){
+    return series.map(x => ({
+      date:x.date,
+      startDate:x.date,
+      open:x.value,
+      high:x.value,
+      low:x.value,
+      close:x.value,
+      value:x.value,
+      observations:1,
+      provisional:false
+    }));
+  }
+
+  const buckets = new Map();
+
+  for(const point of series){
+    const key = periodKey(point.date, granularity);
+
+    if(!buckets.has(key)){
+      buckets.set(key, {
+        key,
+        startDate:point.date,
+        endDate:point.date,
+        open:point.value,
+        high:point.value,
+        low:point.value,
+        close:point.value,
+        observations:1
+      });
+      continue;
+    }
+
+    const bucket = buckets.get(key);
+    bucket.endDate = point.date;
+    bucket.high = Math.max(bucket.high,point.value);
+    bucket.low = Math.min(bucket.low,point.value);
+    bucket.close = point.value;
+    bucket.observations += 1;
+  }
+
+  return [...buckets.values()].map(x => ({
+    date:x.endDate,
+    startDate:x.startDate,
+    open:x.open,
+    high:x.high,
+    low:x.low,
+    close:x.close,
+    value:x.close,
+    observations:x.observations,
+    provisional: !periodIsComplete(x.endDate, granularity)
+  }));
+}
+
+function profileKey(pair){
+  return `fxProfile:${pair}:${selectedGranularity}`;
+}
 
 function defaultProfile(){
   return {aroon:25, stoch:14, smooth:3, er:20, locked:false, lockedAt:null};
@@ -434,6 +560,26 @@ function readControls(){
   return error ? null : values;
 }
 
+function requiredWarmupDays(){
+  const p = readControls();
+  if(!p) return MIN_WARMUP_DAYS[selectedGranularity];
+
+  const longestPeriod = Math.max(
+    p.aroon,
+    p.stoch + p.smooth,
+    p.er
+  );
+
+  const estimated =
+    longestPeriod *
+    GRANULARITY_DAYS_PER_PERIOD[selectedGranularity];
+
+  return Math.max(
+    MIN_WARMUP_DAYS[selectedGranularity],
+    estimated
+  );
+}
+
 function applyProfile(){
   const p = getProfile(selectedPair);
 
@@ -454,6 +600,68 @@ function applyProfile(){
     : "EXPLORATION · parameters editable";
 }
 
+function currentAroonResearch(){
+  return (
+    aroonResearch
+    ?.pairs
+    ?.[selectedPair]
+    ?.granularities
+    ?.[selectedGranularity]
+    ?? null
+  );
+}
+
+function renderResearchState(){
+  const el = $("researchState");
+  const r = currentAroonResearch();
+  const asOf = aroonResearch?.as_of || null;
+
+  el.className = "profileState";
+
+  if(!aroonResearch){
+    el.textContent = "AROON RESEARCH · unavailable";
+    return;
+  }
+
+  if(!r){
+    el.textContent =
+      `AROON RESEARCH · ${selectedGranularity} · insufficient evidence` +
+      `${asOf ? ` · as of ${asOf}` : ""}`;
+    return;
+  }
+
+  if(r.status === "insufficient_evidence"){
+    el.classList.add("researchInsufficient");
+    el.textContent =
+      `AROON RESEARCH · ${selectedGranularity} · insufficient evidence` +
+      `${asOf ? ` · as of ${asOf}` : ""}`;
+    return;
+  }
+
+  const quality = r.candidate_quality || "unknown";
+  const flags = Array.isArray(r.flags) ? r.flags : [];
+
+  if(quality === "clean"){
+    el.classList.add("researchClean");
+  } else {
+    el.classList.add("researchFlagged");
+  }
+
+  let text =
+    `AROON RESEARCH · ${selectedGranularity} · ` +
+    `candidate ${r.candidate_period} · ${quality}`;
+
+  if(flags.length){
+    text += ` · ${flags.join(", ")}`;
+  }
+
+  if(asOf){
+    text += ` · as of ${asOf}`;
+  }
+
+  el.textContent = text;
+}
+
 function saveProfile(lock=false){
   const old = getProfile(selectedPair);
   const v = readControls();
@@ -466,7 +674,7 @@ function saveProfile(lock=false){
   };
   localStorage.setItem(profileKey(selectedPair), JSON.stringify(p));
   applyProfile();
-  render();
+  safeFetchData();
   return true;
 }
 
@@ -498,21 +706,28 @@ function aroon(vals,n){
   return {up,down};
 }
 
-function stochastic(vals,n,smooth){
-  const k = vals.map((v,i) => {
+function stochastic(points,n,smooth){
+  const k = points.map((point,i) => {
     if(i<n-1) return null;
 
-    const w = vals.slice(i-n+1,i+1);
-    const lo = Math.min(...w);
-    const hi = Math.max(...w);
+    const w = points.slice(i-n+1,i+1);
+    const lo = Math.min(...w.map(x => x.low));
+    const hi = Math.max(...w.map(x => x.high));
 
-    return hi === lo ? 50 : 100 * (v-lo) / (hi-lo);
+    return hi === lo
+      ? 50
+      : 100 * (point.close - lo) / (hi - lo);
   });
 
   const d = k.map((_,i) => {
     if(i<smooth-1) return null;
-    const w = k.slice(i-smooth+1,i+1).filter(Number.isFinite);
-    return w.length === smooth ? w.reduce((a,b)=>a+b,0)/smooth : null;
+
+    const w = k.slice(i-smooth+1,i+1);
+    if(w.length !== smooth || !w.every(Number.isFinite)){
+      return null;
+    }
+
+    return w.reduce((a,b)=>a+b,0) / smooth;
   });
 
   return {k,d};
@@ -571,9 +786,13 @@ function renderContext(){
     .slice(0,2);
 
   const cells = [
-    {name:`${base} vs other peers · 5 obs`, value:pct(bs), n:bs},
-    {name:`${quote} vs other peers · 5 obs`, value:pct(qs), n:qs},
-    ...related.map(x => ({name:`${x.p} · 5 obs`,value:pct(x.r),n:x.r}))
+    {name:`${base} vs other peers · 5 daily obs`, value:pct(bs), n:bs},
+    {name:`${quote} vs other peers · 5 daily obs`, value:pct(qs), n:qs},
+    ...related.map(x => ({
+      name:`${x.p} · 5 daily obs`,
+      value:pct(x.r),
+      n:x.r
+    }))
   ];
 
   $("contextStrip").innerHTML = cells.map(x =>
@@ -621,16 +840,123 @@ function quoteUnit(pair){
   return `${quote} per ${base}`;
 }
 
+function priceYBounds(series){
+  if(!series.length) return {};
+
+  const lo = Math.min(...series.map(x => x.low));
+  const hi = Math.max(...series.map(x => x.high));
+
+  let span = hi - lo;
+
+  if(!(span > 0)){
+    span = Math.max(Math.abs(hi) * 0.01, 0.0001);
+  }
+
+  const pad = span * 0.08;
+
+  return {
+    min:lo - pad,
+    max:hi + pad
+  };
+}
+
+const coarsePricePlugin = {
+  id:"coarseReferenceBars",
+
+  afterDatasetsDraw(chart, args, options){
+    const points = options?.points || [];
+    if(!points.length) return;
+
+    const meta = chart.getDatasetMeta(0);
+    const elements = meta.data;
+    const y = chart.scales.y;
+    const area = chart.chartArea;
+    const ctx = chart.ctx;
+
+    if(!elements.length || !y || !area) return;
+
+    let spacing;
+
+    if(elements.length > 1){
+      spacing = Infinity;
+
+      for(let i=1;i<elements.length;i++){
+        spacing = Math.min(
+          spacing,
+          Math.abs(elements[i].x - elements[i-1].x)
+        );
+      }
+    } else {
+      spacing = area.width * 0.25;
+    }
+
+    const tickWidth = Math.max(
+      3,
+      Math.min(9, spacing * 0.28)
+    );
+
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.rect(
+      area.left,
+      area.top,
+      area.right - area.left,
+      area.bottom - area.top
+    );
+    ctx.clip();
+
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "#95a3b3";
+
+    points.forEach((point,i) => {
+      const element = elements[i];
+      if(!element) return;
+
+      const x = element.x;
+      const highY = y.getPixelForValue(point.high);
+      const lowY = y.getPixelForValue(point.low);
+      const openY = y.getPixelForValue(point.open);
+      const closeY = y.getPixelForValue(point.close);
+
+      ctx.save();
+      ctx.setLineDash(point.provisional ? [4,3] : []);
+
+      ctx.beginPath();
+
+      // observed low-high range
+      ctx.moveTo(x,highY);
+      ctx.lineTo(x,lowY);
+
+      // first observation / open: left-facing tick
+      ctx.moveTo(x - tickWidth,openY);
+      ctx.lineTo(x,openY);
+
+      // last observation / close: right-facing tick
+      ctx.moveTo(x,closeY);
+      ctx.lineTo(x + tickWidth,closeY);
+
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    ctx.restore();
+  }
+};
+
 function renderCharts(){
   const p = readControls();
   if(!p) return null;
 
-  const full = rawSeries[selectedPair] || [];
+  const full = aggregateSeries(
+    rawSeries[selectedPair] || [],
+    selectedGranularity
+  );
   const fullLabels = full.map(x => x.date);
   const fullVals = full.map(x => x.value);
 
   const fullAroon = aroon(fullVals,p.aroon);
-  const fullStoch = stochastic(fullVals,p.stoch,p.smooth);
+  const fullStoch = stochastic(full,p.stoch,p.smooth);
   const fullEr = efficiency(fullVals,p.er);
 
   const cutoff = dateDaysAgo(Number($("rangeSelect").value));
@@ -638,6 +964,7 @@ function renderCharts(){
   if(startIndex < 0) startIndex = Math.max(0, full.length - 1);
 
   const s = full.slice(startIndex);
+  const latestBucket = s.at(-1);
   const labels = fullLabels.slice(startIndex);
   const vals = fullVals.slice(startIndex);
   const ar = {
@@ -650,16 +977,103 @@ function renderCharts(){
   };
   const er = fullEr.slice(startIndex);
 
-  $("heroPair").textContent = `${selectedPair} · ${fmt(vals.at(-1), vals.at(-1)>20 ? 3 : 5)}`;
-  $("priceTitle").textContent = `${selectedPair} history`;
+  $("heroPair").textContent =
+    `${selectedPair} · ${selectedGranularity} · ` +
+    `${fmt(vals.at(-1), vals.at(-1)>20 ? 3 : 5)}` +
+    `${latestBucket?.provisional ? " · provisional" : ""}`;
+  $("priceTitle").textContent =
+    `${selectedPair} · ${selectedGranularity} history`;
 
-  replaceChart("price","priceChart",{
-    type:"line",
-    data:{labels,datasets:[
-      {label:selectedPair,data:vals,borderWidth:2,pointRadius:0,tension:.08}
-    ]},
-    options:baseOptions(null,null,quoteUnit(selectedPair))
-  });
+  const priceOptions = baseOptions(
+    null,
+    null,
+    quoteUnit(selectedPair)
+  );
+
+  if(selectedGranularity === "1D"){
+    replaceChart("price","priceChart",{
+      type:"line",
+      data:{
+        labels,
+        datasets:[{
+          label:selectedPair,
+          data:vals,
+          borderWidth:2,
+          pointRadius:0,
+          tension:.08
+        }]
+      },
+      options:priceOptions
+    });
+  } else {
+    const bounds = priceYBounds(s);
+
+    priceOptions.scales.y.min = bounds.min;
+    priceOptions.scales.y.max = bounds.max;
+
+    // Offset gives the endpoint ticks room at both ends.
+    priceOptions.scales.x.offset = true;
+
+    priceOptions.plugins.legend.display = false;
+    priceOptions.plugins.tooltip = {
+      displayColors:false,
+      callbacks:{
+        title(items){
+          if(!items.length) return "";
+
+          const point = s[items[0].dataIndex];
+          if(!point) return "";
+
+          const first = point.startDate ?? point.date;
+          return first === point.date
+            ? point.date
+            : `${first} → ${point.date}`;
+        },
+
+        label(context){
+          const point = s[context.dataIndex];
+          if(!point) return [];
+
+          return [
+            `Open / first reference: ${fmt(point.open,8)}`,
+            `High / max reference: ${fmt(point.high,8)}`,
+            `Low / min reference: ${fmt(point.low,8)}`,
+            `Close / last reference: ${fmt(point.close,8)}`,
+            `Observations: ${point.observations}`,
+            `Status: ${point.provisional ? "provisional" : "complete"}`
+          ];
+        }
+      }
+    };
+
+    replaceChart("price","priceChart",{
+      type:"line",
+      data:{
+        labels,
+        datasets:[{
+          label:selectedPair,
+          data:vals,
+          borderColor:"rgba(0,0,0,0)",
+          backgroundColor:"rgba(0,0,0,0)",
+          borderWidth:0,
+          pointRadius:0,
+          pointHoverRadius:0,
+          showLine:false
+        }]
+      },
+      options:priceOptions,
+      plugins:[{
+        ...coarsePricePlugin,
+        afterDatasetsDraw(chart,args){
+          coarsePricePlugin.afterDatasetsDraw(
+            chart,
+            args,
+            {points:s}
+          );
+        }
+      }]
+    });
+  }
 
   replaceChart("aroon","aroonChart",{
     type:"line",
@@ -697,12 +1111,15 @@ function renderCharts(){
 function renderPacket(x){
   const [base,quote] = selectedPair.split("/");
   const last = x.s.at(-1);
+  const research = currentAroonResearch();
   const pr = getProfile(selectedPair);
 
   const lines = [
     "FX Rotation Lab snapshot",
     `Pair: ${selectedPair}`,
+    `Granularity: ${selectedGranularity}`,
     `Observation date: ${last?.date || "—"}`,
+    `Observation state: ${last?.provisional ? "provisional" : "complete"}`,
     `Data retrieved: ${lastFetchAt ? lastFetchAt.toISOString() : "—"}`,
     `Snapshot generated: ${new Date().toISOString()}`,
     "Data source: ECB daily reference rates via Frankfurter",
@@ -710,17 +1127,34 @@ function renderPacket(x){
     "",
     "PAIR",
     `Rate: ${fmt(x.vals.at(-1),8)}`,
-    `5-observation return: ${pct(pairReturn(selectedPair,5))}`,
-    `20-observation return: ${pct(pairReturn(selectedPair,20))}`,
     "",
     "INDICATORS",
     `Aroon(${x.p.aroon}): Up ${fmt(latestFinite(x.ar.up),1)} / Down ${fmt(latestFinite(x.ar.down),1)}`,
-    `Stochastic-close(${x.p.stoch},${x.p.smooth}): %K ${fmt(latestFinite(x.st.k),1)} / %D ${fmt(latestFinite(x.st.d),1)}`,
+    `Stochastic-reference-range(${x.p.stoch},${x.p.smooth}): %K ${fmt(latestFinite(x.st.k),1)} / %D ${fmt(latestFinite(x.st.d),1)}`,
+    "Basis: current bucket close relative to rolling highs/lows of daily ECB reference observations.",
+    "Backoffice note: coarse frontend stochastic is not equivalent to existing close-only backoffice stochastic confirmation.",
     `Kaufman ER(${x.p.er}): ${fmt(latestFinite(x.er),3)}`,
     "",
+    "AROON RESEARCH",
+    aroonResearch?.as_of
+      ? `Research as of: ${aroonResearch.as_of}`
+      : "Research as of: —",
+    research
+      ? `Status: ${research.status}`
+      : "Status: unavailable",
+    research?.candidate_period != null
+      ? `Candidate period: ${research.candidate_period}`
+      : "Candidate period: —",
+    research?.candidate_quality
+      ? `Candidate quality: ${research.candidate_quality}`
+      : "Candidate quality: —",
+    research?.flags?.length
+      ? `Flags: ${research.flags.join(", ")}`
+      : "Flags: none",
+    "",
     "CROSS-CURRENCY CONTEXT",
-    `${base} vs other peers · 5 obs: ${pct(currencyStrength(base,5,quote))}`,
-    `${quote} vs other peers · 5 obs: ${pct(currencyStrength(quote,5,base))}`,
+    `${base} vs other peers · 5 daily obs: ${pct(currencyStrength(base,5,quote))}`,
+    `${quote} vs other peers · 5 daily obs: ${pct(currencyStrength(quote,5,base))}`,
     "",
     "PROFILE",
     pr.locked ? `Locked: ${pr.lockedAt}` : "Exploration / unlocked",
@@ -743,82 +1177,23 @@ function render(){
   renderContext();
   const x = renderCharts();
   if(x) renderPacket(x);
+  renderResearchState();
 }
 
 function initPairs(){
   $("pairSelect").innerHTML = PAIRS.map(p => `<option>${p}</option>`).join("");
   $("pairSelect").value = selectedPair;
-}
-
-function loadMoves(){
-  return JSON.parse(localStorage.getItem("fxMoves") || "[]");
-}
-
-function saveMoves(m){
-  localStorage.setItem("fxMoves",JSON.stringify(m));
-  renderMoves();
-}
-
-function renderMoves(){
-  const rows = loadMoves();
-
-  $("moveRows").innerHTML = rows.length
-    ? rows.map((r,i) => `<tr>
-        <td>${r.date}</td><td>${r.from}</td><td>${r.to}</td>
-        <td>${r.amount}</td><td>${r.rate}</td><td>${r.fee}</td>
-        <td>${r.note || ""}</td>
-        <td><button data-del="${i}">×</button></td>
-      </tr>`).join("")
-    : `<tr><td colspan="8" class="neutral">No recorded moves.</td></tr>`;
-
-  document.querySelectorAll("[data-del]").forEach(b => {
-    b.onclick = () => {
-      const x = loadMoves();
-      x.splice(Number(b.dataset.del),1);
-      saveMoves(x);
-    };
+  $("granularitySelect").addEventListener("change",e => {
+    selectedGranularity = e.target.value;
+    applyProfile();
+    safeFetchData();
   });
-}
-
-$("moveForm").addEventListener("submit",e => {
-  e.preventDefault();
-
-  const from = $("moveFrom").value;
-  const to = $("moveTo").value;
-
-  if(from === to){
-    alert("From and To currencies must differ.");
-    return;
-  }
-
-  const moves = loadMoves();
-
-  moves.unshift({
-    date:$("moveDate").value,
-    from,
-    to,
-    amount:$("moveAmount").value,
-    rate:$("moveRate").value,
-    fee:$("moveFee").value,
-    note:$("moveNote").value.trim()
-  });
-
-  saveMoves(moves);
-  e.target.reset();
-  $("moveFee").value = "0";
-  setDefaultDate();
-});
-
-function setDefaultDate(){
-  const d = new Date();
-  d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
-  $("moveDate").value = d.toISOString().slice(0,16);
 }
 
 $("pairSelect").addEventListener("change",e => {
   selectedPair = e.target.value;
   applyProfile();
-  render();
+  safeFetchData();
 });
 
 $("rangeSelect").addEventListener("change",safeFetchData);
@@ -836,7 +1211,7 @@ $("resetProfileBtn").addEventListener("click",() => {
   if(p.locked) return;
   localStorage.setItem(profileKey(selectedPair), JSON.stringify(defaultProfile()));
   applyProfile();
-  render();
+  safeFetchData();
 });
 
 $("lockProfileBtn").addEventListener("click",() => {
@@ -870,10 +1245,13 @@ $("refreshBtn").addEventListener("click",safeFetchData);
 
 initPairs();
 applyProfile();
-setDefaultDate();
-renderMoves();
 
-safeFetchData();
+Promise.all([
+  loadAroonResearch(),
+  safeFetchData()
+]).then(() => {
+  render();
+});
 </script>
 </body>
 </html>
