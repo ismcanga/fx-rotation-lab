@@ -92,9 +92,11 @@
     .profileState { margin-top: 12px; color: var(--muted); font-size: 12px; }
     .locked { color: var(--warn); }
 
-    .price { min-height: 360px; }
-    .indicator-wide { min-height: 330px; }
-    canvas { width: 100% !important; }
+    .price, .indicator-wide { min-height: 0; }
+    .chartBox { position: relative; width: 100%; height: 300px; margin-top: 10px; overflow: hidden; }
+    .price .chartBox { height: 320px; }
+    .indicator-wide .chartBox { height: 260px; }
+    .chartBox canvas { display: block; width: 100% !important; height: 100% !important; }
 
     .packet textarea {
       width: 100%;
@@ -195,25 +197,25 @@
     <section class="panel price">
       <h2 id="priceTitle">Pair history</h2>
       <p class="legend">Price is context. The analytical emphasis is on the indicator panels below.</p>
-      <canvas id="priceChart"></canvas>
+      <div class="chartBox"><canvas id="priceChart"></canvas></div>
     </section>
 
     <section class="panel indicator-wide">
       <h2>Aroon</h2>
       <p class="legend">Recency of the highest and lowest observations inside this pair's saved period. Aroon Up and Aroon Down are descriptive, not buy/sell commands.</p>
-      <canvas id="aroonChart"></canvas>
+      <div class="chartBox"><canvas id="aroonChart"></canvas></div>
     </section>
 
     <section class="panel indicator-wide">
       <h2>Stochastic</h2>
       <p class="legend">Position of the current reference rate inside its recent observed range. ECB reference-rate history does not provide intraday high/low, so this version uses rolling daily closes rather than a textbook OHLC stochastic.</p>
-      <canvas id="stochChart"></canvas>
+      <div class="chartBox"><canvas id="stochChart"></canvas></div>
     </section>
 
     <section class="panel indicator-wide">
       <h2>Kaufman efficiency ratio</h2>
       <p class="legend">Absolute net movement divided by total path movement. Near 1 means relatively directional travel; near 0 means a noisy path. It measures efficiency, not direction.</p>
-      <canvas id="erChart"></canvas>
+      <div class="chartBox"><canvas id="erChart"></canvas></div>
     </section>
 
     <section class="panel packet">
