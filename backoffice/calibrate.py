@@ -745,6 +745,7 @@ def calibrate_pair(
         "policy": asdict(policy),
         "status": "research_candidate" if sufficient else "insufficient_evidence",
         "candidate_period": candidate_period,
+        "candidate_quality": candidate_quality,
         "current_period": current_period,
         "full_sample_diagnostic_period": (
             primary_plateau.representative if primary_plateau else None
@@ -908,7 +909,7 @@ def build_web_research(*, research_payload: dict) -> dict:
             granularities[granularity] = {
                 "status": result["status"],
                 "candidate_period": result["candidate_period"],
-                "candidate_quality": result["candidate_quality"],
+                "candidate_quality": result.get("candidate_quality"),
                 "flags": [
                     name
                     for name, enabled in result["flags"].items()
