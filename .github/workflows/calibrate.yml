@@ -1,7 +1,12 @@
-name: Calibrate FX profiles
+name: Run FX calibration research
 
 on:
   workflow_dispatch:
+    inputs:
+      as_of:
+        description: Completed historical year cutoff (YYYY-12-31)
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,18 +26,34 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Run fixtures
+        run: |
+          python3 -B backoffice/fixtures.py
+          python3 -B -m unittest discover -s backoffice -p 'test_*.py'
+
       - name: Run calibration
         shell: bash
+        env:
+          CALIBRATION_AS_OF: ${{ inputs.as_of }}
         run: |
           set -euo pipefail
-          python3 backoffice/calibrate.py | tee calibration.log
+          python3 -B backoffice/calibrate.py --as-of "$CALIBRATION_AS_OF" | tee calibration.log
 
-      - name: Upload calibration result
+      - name: Verify web artifact
+        run: |
+          test -f "backoffice/artifacts/aroon_web_${{ inputs.as_of }}.json"
+          python3 -m json.tool \
+            "backoffice/artifacts/aroon_web_${{ inputs.as_of }}.json" \
+            > /dev/null
+
+      - name: Upload calibration artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: fx-calibration-${{ github.run_number }}
+          name: fx-calibration-${{ inputs.as_of }}
           path: |
-            profiles.json
+            backoffice/artifacts/aroon_research_*.json
+            backoffice/artifacts/aroon_web_*.json
+            backoffice/artifacts/ecb_daily_*.json
             calibration.log
           if-no-files-found: error
           retention-days: 30
