@@ -39,3 +39,42 @@ During exploration, parameters may be edited and saved. A profile can then be lo
 ## Deployment
 
 For GitHub Pages, place `index.html` in the repository root and publish from the `main` branch `/ (root)`.
+
+
+## Indicator conventions
+
+Periods count synchronized observations, not elapsed calendar days.
+
+- **Aroon** uses `N` observations, includes the current observation, divides by `N-1`, and uses the most recent tied high or low. A completely flat window is treated as `Aroon Up = 0` and `Aroon Down = 0` in this project because the window contains no directional extreme information.
+- **Range position (stochastic)** uses the current daily reference observation relative to the minimum and maximum of the latest `N` daily reference observations. A flat range returns `%K = 50`. `%D` is a simple arithmetic average of the latest smoothing-period `%K` values.
+- **Kaufman efficiency ratio** uses `N` changes across `N+1` observations. A completely flat path returns `0`.
+- Indicator calculations use fetched warm-up observations before the visible history window. Changing the visible history must not change an indicator value for an overlapping date.
+- Missing synchronized dates are not forward-filled.
+
+## Peer context
+
+For a selected pair `A/B`, the displayed context for A is the equal-weight arithmetic average of A's 5-observation percentage returns against the other two currencies in the four-currency universe, excluding B. B is treated symmetrically.
+
+Example while viewing USD/JPY:
+
+- USD context averages USD versus CHF and EUR.
+- JPY context averages JPY versus CHF and EUR.
+
+The label therefore says **vs other peers**, not breadth.
+
+## Parameter profiles
+
+Parameter inputs accept integers only:
+
+- Aroon: 5–120 observations
+- Range position: 5–120 observations
+- Stochastic smoothing: 1–20 observations
+- Efficiency ratio: 2–120 changes
+
+Invalid or temporarily empty inputs do not recalculate the charts and cannot be saved or locked.
+
+A locked profile freezes the parameter values only. New market observations continue to flow through those parameters. It does not archive or freeze the underlying dataset.
+
+## Retrieval status
+
+The page stores the timestamp of the last successful data fetch separately from the time an analysis packet is generated. If a later refresh fails, retained charts remain visible and the status says that older successfully retrieved data is still being shown.

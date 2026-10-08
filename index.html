@@ -93,6 +93,8 @@
 
     .profileState { margin-top: 12px; color: var(--muted); font-size: 12px; }
     .locked { color: var(--warn); }
+    .paramError { flex-basis: 100%; min-height: 1.2em; color: var(--bad); font-size: 12px; }
+    input.invalid { border-color: var(--bad); }
 
     .price, .indicator-wide { min-height: 0; }
     .chartBox {
@@ -221,6 +223,7 @@
     <label><span>&nbsp;</span>
       <button id="refreshBtn">Refresh data</button>
     </label>
+    <div id="paramError" class="paramError" role="status" aria-live="polite"></div>
   </section>
 
   <div class="grid">
@@ -301,6 +304,15 @@ const CURRENCIES = ["EUR","USD","CHF","JPY"];
 let rawSeries = {};
 let selectedPair = "USD/CHF";
 let charts = {};
+let lastFetchAt = null;
+
+const WARMUP_CALENDAR_DAYS = 260;
+const PARAM_LIMITS = {
+  aroon: [5,120],
+  stoch: [5,120],
+  smooth: [1,20],
+  er: [2,120]
+};
 
 const $ = id => document.getElementById(id);
 const fmt = (v, d=5) => Number.isFinite(v) ? v.toLocaleString(undefined,{maximumFractionDigits:d}) : "—";
@@ -331,7 +343,7 @@ async function fetchData(){
   const days = Number($("rangeSelect").value);
   $("status").textContent = "Loading ECB reference-rate history…";
 
-  const url = `https://api.frankfurter.dev/v2/rates?from=${dateDaysAgo(days+60)}&quotes=USD,CHF,JPY&providers=ecb`;
+  const url = `https://api.frankfurter.dev/v2/rates?from=${dateDaysAgo(days+WARMUP_CALENDAR_DAYS)}&quotes=USD,CHF,JPY&providers=ecb`;
   const res = await fetch(url);
   if(!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -348,14 +360,32 @@ async function fetchData(){
     .sort(([a],[b]) => a.localeCompare(b))
     .map(([date,r]) => ({date,...r}));
 
-  rawSeries = {};
+  if(!normalized.length) throw new Error("No synchronized observations returned");
+
+  const nextSeries = {};
   for(const p of PAIRS){
-    rawSeries[p] = normalized.map(r => ({date:r.date,value:cross(r,p)}));
+    nextSeries[p] = normalized.map(r => ({date:r.date,value:cross(r,p)}));
   }
 
+  rawSeries = nextSeries;
+  lastFetchAt = new Date();
+
   const last = normalized.at(-1)?.date || "unknown";
-  $("status").textContent = `ECB provider · last observation ${last} · retrieved ${new Date().toLocaleString()}`;
+  $("status").textContent = `ECB provider · last observation ${last} · retrieved ${lastFetchAt.toLocaleString()}`;
   render();
+}
+
+async function safeFetchData(){
+  try {
+    await fetchData();
+  } catch(err) {
+    console.error(err);
+    if(Object.keys(rawSeries).length && lastFetchAt){
+      $("status").textContent = `Refresh failed · showing data retrieved ${lastFetchAt.toLocaleString()} · ${err.message}`;
+    } else {
+      $("status").textContent = `Data load failed · ${err.message}`;
+    }
+  }
 }
 
 function visibleSeries(pair){
@@ -379,12 +409,29 @@ function getProfile(pair){
 }
 
 function readControls(){
-  return {
-    aroon: Number($("aroonPeriod").value),
-    stoch: Number($("stochPeriod").value),
-    smooth: Number($("stochSmooth").value),
-    er: Number($("erPeriod").value)
+  const fields = {
+    aroon: $("aroonPeriod"),
+    stoch: $("stochPeriod"),
+    smooth: $("stochSmooth"),
+    er: $("erPeriod")
   };
+  const values = {};
+  let error = "";
+
+  for(const [key,el] of Object.entries(fields)){
+    const raw = el.value.trim();
+    const value = Number(raw);
+    const [min,max] = PARAM_LIMITS[key];
+    const ok = raw !== "" && Number.isInteger(value) && value >= min && value <= max;
+    el.classList.toggle("invalid", !ok);
+    if(!ok && !error){
+      error = `${key} must be an integer from ${min} to ${max}.`;
+    }
+    values[key] = value;
+  }
+
+  $("paramError").textContent = error;
+  return error ? null : values;
 }
 
 function applyProfile(){
@@ -403,13 +450,14 @@ function applyProfile(){
   $("lockProfileBtn").textContent = p.locked ? "Unlock parameters" : "Lock parameters";
   $("profileState").className = p.locked ? "profileState locked" : "profileState";
   $("profileState").textContent = p.locked
-    ? `LOCKED · ${p.lockedAt || ""}`
+    ? `PARAMETERS LOCKED · ${p.lockedAt || ""}`
     : "EXPLORATION · parameters editable";
 }
 
 function saveProfile(lock=false){
   const old = getProfile(selectedPair);
   const v = readControls();
+  if(!v) return false;
   const p = {
     ...old,
     ...v,
@@ -419,6 +467,7 @@ function saveProfile(lock=false){
   localStorage.setItem(profileKey(selectedPair), JSON.stringify(p));
   applyProfile();
   render();
+  return true;
 }
 
 function aroon(vals,n){
@@ -433,6 +482,13 @@ function aroon(vals,n){
     const w = vals.slice(i-n+1,i+1);
     const hi = Math.max(...w);
     const lo = Math.min(...w);
+
+    if(hi === lo){
+      up.push(0);
+      down.push(0);
+      continue;
+    }
+
     const hiIdx = w.lastIndexOf(hi);
     const loIdx = w.lastIndexOf(lo);
 
@@ -478,12 +534,12 @@ function efficiency(vals,n){
 }
 
 function pairReturn(pair,k=5){
-  const v = visibleSeries(pair).map(x => x.value);
+  const v = (rawSeries[pair] || []).map(x => x.value);
   return v.length > k ? 100 * (v.at(-1)/v.at(-1-k)-1) : null;
 }
 
-function currencyStrength(ccy,k=5){
-  const peers = CURRENCIES.filter(x => x !== ccy);
+function currencyStrength(ccy,k=5,excludeCcy=null){
+  const peers = CURRENCIES.filter(x => x !== ccy && x !== excludeCcy);
   const rs = [];
 
   for(const peer of peers){
@@ -505,8 +561,8 @@ function currencyStrength(ccy,k=5){
 
 function renderContext(){
   const [base,quote] = selectedPair.split("/");
-  const bs = currencyStrength(base);
-  const qs = currencyStrength(quote);
+  const bs = currencyStrength(base,5,quote);
+  const qs = currencyStrength(quote,5,base);
 
   const related = PAIRS
     .filter(p => p !== selectedPair && (p.includes(base) || p.includes(quote)))
@@ -515,8 +571,8 @@ function renderContext(){
     .slice(0,2);
 
   const cells = [
-    {name:`${base} vs peers · 5 obs`, value:pct(bs), n:bs},
-    {name:`${quote} vs peers · 5 obs`, value:pct(qs), n:qs},
+    {name:`${base} vs other peers · 5 obs`, value:pct(bs), n:bs},
+    {name:`${quote} vs other peers · 5 obs`, value:pct(qs), n:qs},
     ...related.map(x => ({name:`${x.p} · 5 obs`,value:pct(x.r),n:x.r}))
   ];
 
@@ -567,13 +623,32 @@ function quoteUnit(pair){
 
 function renderCharts(){
   const p = readControls();
-  const s = visibleSeries(selectedPair);
-  const labels = s.map(x => x.date);
-  const vals = s.map(x => x.value);
+  if(!p) return null;
 
-  const ar = aroon(vals,p.aroon);
-  const st = stochastic(vals,p.stoch,p.smooth);
-  const er = efficiency(vals,p.er);
+  const full = rawSeries[selectedPair] || [];
+  const fullLabels = full.map(x => x.date);
+  const fullVals = full.map(x => x.value);
+
+  const fullAroon = aroon(fullVals,p.aroon);
+  const fullStoch = stochastic(fullVals,p.stoch,p.smooth);
+  const fullEr = efficiency(fullVals,p.er);
+
+  const cutoff = dateDaysAgo(Number($("rangeSelect").value));
+  let startIndex = full.findIndex(x => x.date >= cutoff);
+  if(startIndex < 0) startIndex = Math.max(0, full.length - 1);
+
+  const s = full.slice(startIndex);
+  const labels = fullLabels.slice(startIndex);
+  const vals = fullVals.slice(startIndex);
+  const ar = {
+    up: fullAroon.up.slice(startIndex),
+    down: fullAroon.down.slice(startIndex)
+  };
+  const st = {
+    k: fullStoch.k.slice(startIndex),
+    d: fullStoch.d.slice(startIndex)
+  };
+  const er = fullEr.slice(startIndex);
 
   $("heroPair").textContent = `${selectedPair} · ${fmt(vals.at(-1), vals.at(-1)>20 ? 3 : 5)}`;
   $("priceTitle").textContent = `${selectedPair} history`;
@@ -628,7 +703,8 @@ function renderPacket(x){
     "FX Rotation Lab snapshot",
     `Pair: ${selectedPair}`,
     `Observation date: ${last?.date || "—"}`,
-    `Retrieved: ${new Date().toISOString()}`,
+    `Data retrieved: ${lastFetchAt ? lastFetchAt.toISOString() : "—"}`,
+    `Snapshot generated: ${new Date().toISOString()}`,
     "Data source: ECB daily reference rates via Frankfurter",
     "Execution warning: reference rates are not executable broker bid/ask quotes",
     "",
@@ -643,8 +719,8 @@ function renderPacket(x){
     `Kaufman ER(${x.p.er}): ${fmt(latestFinite(x.er),3)}`,
     "",
     "CROSS-CURRENCY CONTEXT",
-    `${base} 5-observation peer average: ${pct(currencyStrength(base))}`,
-    `${quote} 5-observation peer average: ${pct(currencyStrength(quote))}`,
+    `${base} vs other peers · 5 obs: ${pct(currencyStrength(base,5,quote))}`,
+    `${quote} vs other peers · 5 obs: ${pct(currencyStrength(quote,5,base))}`,
     "",
     "PROFILE",
     pr.locked ? `Locked: ${pr.lockedAt}` : "Exploration / unlocked",
@@ -663,9 +739,10 @@ function renderPacket(x){
 
 function render(){
   if(!rawSeries[selectedPair]?.length) return;
+  if(!readControls()) return;
   renderContext();
   const x = renderCharts();
-  renderPacket(x);
+  if(x) renderPacket(x);
 }
 
 function initPairs(){
@@ -744,10 +821,12 @@ $("pairSelect").addEventListener("change",e => {
   render();
 });
 
-$("rangeSelect").addEventListener("change",fetchData);
+$("rangeSelect").addEventListener("change",safeFetchData);
 
 ["aroonPeriod","stochPeriod","stochSmooth","erPeriod"].forEach(id => {
-  $(id).addEventListener("input",render);
+  $(id).addEventListener("input",() => {
+    if(readControls()) render();
+  });
 });
 
 $("saveProfileBtn").addEventListener("click",() => saveProfile(false));
@@ -787,17 +866,14 @@ $("copyPacketBtn").addEventListener("click",async () => {
   }
 });
 
-$("refreshBtn").addEventListener("click",fetchData);
+$("refreshBtn").addEventListener("click",safeFetchData);
 
 initPairs();
 applyProfile();
 setDefaultDate();
 renderMoves();
 
-fetchData().catch(err => {
-  $("status").textContent = `Data load failed: ${err.message}`;
-  console.error(err);
-});
+safeFetchData();
 </script>
 </body>
 </html>
