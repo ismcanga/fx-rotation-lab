@@ -169,7 +169,7 @@
   <header>
     <div>
       <h1>FX Rotation Lab</h1>
-      <p class="sub">One pair at a time. Indicators first. Cross-currency context stays in peripheral view. Reference rates are observational, not executable broker quotes.</p>
+      <p class="sub">One pair at a time. Read the price, the extremes, the range position, and how cleanly the move travelled.</p>
     </div>
     <div class="status" id="status">Loading ECB reference-rate history…</div>
   </header>
@@ -212,6 +212,10 @@
     </label>
 
     <label><span>&nbsp;</span>
+      <button id="resetProfileBtn">Reset defaults</button>
+    </label>
+
+    <label><span>&nbsp;</span>
       <button id="refreshBtn">Refresh data</button>
     </label>
   </section>
@@ -219,38 +223,38 @@
   <div class="grid">
     <section class="panel summary">
       <div class="heroPair" id="heroPair">USD/CHF</div>
-      <p class="legend">Cross context is intentionally small: it helps distinguish broad currency strength/weakness from a move isolated to the selected pair.</p>
+      <p class="legend">Peer context stays small: it helps show whether the selected move is broad or mostly isolated to this pair.</p>
       <div class="contextStrip" id="contextStrip"></div>
       <div class="profileState" id="profileState"></div>
     </section>
 
     <section class="panel price">
       <h2 id="priceTitle">Pair history</h2>
-      <p class="legend">Price is context. The analytical emphasis is on the indicator panels below.</p>
+      <p class="legend">What happened to the exchange rate.</p>
       <div class="chartBox"><canvas id="priceChart"></canvas></div>
     </section>
 
     <section class="panel indicator-wide">
       <h2>Aroon</h2>
-      <p class="legend">Recency of the highest and lowest observations inside this pair's saved period. Aroon Up and Aroon Down are descriptive, not buy/sell commands.</p>
-      <div class="chartBox"><canvas id="aroonChart"></canvas></div>
+      <p class="legend">Shows whether recent highs or recent lows are dominating. High Up = a high happened recently; high Down = a low happened recently.</p>
+      <div class="chartBox"><canvas id="aroonChart"></canvas></div><p class="legend"><b>Read:</b> Up high / Down low = highs are recent. Down high / Up low = lows are recent. Frequent crossings = less persistent direction.</p>
     </section>
 
     <section class="panel indicator-wide">
-      <h2>Stochastic</h2>
-      <p class="legend">Position of the current reference rate inside its recent observed range. ECB reference-rate history does not provide intraday high/low, so this version uses rolling daily closes rather than a textbook OHLC stochastic.</p>
-      <div class="chartBox"><canvas id="stochChart"></canvas></div>
+      <h2>Range position <span class="neutral">(stochastic)</span></h2>
+      <p class="legend">Shows where today's rate sits inside its recent range. Near 100 = near the top; near 0 = near the bottom. This FX version uses daily reference observations, not OHLC bars.</p>
+      <div class="chartBox"><canvas id="stochChart"></canvas></div><p class="legend"><b>Read:</b> High values mean the rate is near the top of its recent range; low values mean it is near the bottom. Staying high can mean persistence, not necessarily reversal.</p>
     </section>
 
     <section class="panel indicator-wide">
       <h2>Kaufman efficiency ratio</h2>
-      <p class="legend">Absolute net movement divided by total path movement. Near 1 means relatively directional travel; near 0 means a noisy path. It measures efficiency, not direction.</p>
-      <div class="chartBox"><canvas id="erChart"></canvas></div>
+      <p class="legend">Shows how cleanly the rate travelled. Near 1 = relatively direct; near 0 = lots of back-and-forth.</p>
+      <div class="chartBox"><canvas id="erChart"></canvas></div><p class="legend"><b>Read:</b> Higher = cleaner path. Lower = more zig-zag. Efficiency does not tell you the direction.</p>
     </section>
 
     <section class="panel packet">
       <h2>Copy for ChatGPT</h2>
-      <p class="legend">The page computes the snapshot deterministically. No API key, embedded model, or backend is required.</p>
+      <p class="legend">Copy the current chart state into ChatGPT for a human-readable interpretation.</p>
       <textarea id="analysisPacket" readonly></textarea>
       <div class="packetActions">
         <button id="copyPacketBtn">Copy analysis packet</button>
@@ -259,7 +263,7 @@
 
     <section class="panel moves">
       <h2>Move journal</h2>
-      <p class="legend">Manual record only. Saved in this browser with localStorage; nothing is sent to a server. This is not yet a trading/accounting engine.</p>
+      <p class="legend">Manual notes saved only in this browser.</p>
 
       <form id="moveForm" class="formgrid">
         <input id="moveDate" type="datetime-local" required />
@@ -284,7 +288,7 @@
     </section>
   </div>
 
-  <p class="foot">Source: Frankfurter API pinned to the European Central Bank provider. Daily ECB reference rates are used for observation and reproducible historical indicators. They are not broker bid/ask prices and do not include spreads, commissions, funding restrictions, settlement effects, or interest. Cross-rates are derived algebraically from synchronized EUR reference rates.</p>
+  <p class="foot">Source: ECB reference rates via Frankfurter. Indicators describe recent price behaviour; they do not predict the next move. Reference rates are not executable broker quotes.</p>
 </main>
 
 <script>
@@ -392,7 +396,8 @@ function applyProfile(){
   inputs.forEach(x => x.disabled = p.locked);
 
   $("saveProfileBtn").disabled = p.locked;
-  $("lockProfileBtn").textContent = p.locked ? "Unlock for exploration" : "Lock profile";
+  $("resetProfileBtn").disabled = p.locked;
+  $("lockProfileBtn").textContent = p.locked ? "Unlock parameters" : "Lock parameters";
   $("profileState").className = p.locked ? "profileState locked" : "profileState";
   $("profileState").textContent = p.locked
     ? `LOCKED · ${p.lockedAt || ""}`
@@ -507,8 +512,8 @@ function renderContext(){
     .slice(0,2);
 
   const cells = [
-    {name:`${base} breadth · 5 obs`, value:pct(bs), n:bs},
-    {name:`${quote} breadth · 5 obs`, value:pct(qs), n:qs},
+    {name:`${base} vs peers · 5 obs`, value:pct(bs), n:bs},
+    {name:`${quote} vs peers · 5 obs`, value:pct(qs), n:qs},
     ...related.map(x => ({name:`${x.p} · 5 obs`,value:pct(x.r),n:x.r}))
   ];
 
@@ -525,10 +530,11 @@ function replaceChart(key,canvasId,config){
   charts[key] = new Chart($(canvasId),config);
 }
 
-function baseOptions(yMin=null,yMax=null){
+function baseOptions(yMin=null,yMax=null,yTitle=""){
   const y = {
     ticks:{color:"#95a3b3"},
-    grid:{color:"rgba(149,163,179,.10)"}
+    grid:{color:"rgba(149,163,179,.10)"},
+    title:{display:Boolean(yTitle),text:yTitle,color:"#95a3b3"}
   };
 
   if(Number.isFinite(yMin)) y.min = yMin;
@@ -540,12 +546,20 @@ function baseOptions(yMin=null,yMax=null){
     animation:false,
     resizeDelay:100,
     interaction:{mode:"index",intersect:false},
-    plugins:{legend:{labels:{color:"#cbd5e1"}}},
+    plugins:{
+      legend:{labels:{color:"#cbd5e1",usePointStyle:true,boxWidth:8}},
+      tooltip:{displayColors:true}
+    },
     scales:{
       x:{ticks:{color:"#95a3b3",maxTicksLimit:8},grid:{color:"rgba(149,163,179,.08)"}},
       y
     }
   };
+}
+
+function quoteUnit(pair){
+  const [base,quote] = pair.split("/");
+  return `${quote} per ${base}`;
 }
 
 function renderCharts(){
@@ -566,16 +580,18 @@ function renderCharts(){
     data:{labels,datasets:[
       {label:selectedPair,data:vals,borderWidth:2,pointRadius:0,tension:.08}
     ]},
-    options:baseOptions()
+    options:baseOptions(null,null,quoteUnit(selectedPair))
   });
 
   replaceChart("aroon","aroonChart",{
     type:"line",
     data:{labels,datasets:[
       {label:"Aroon Up",data:ar.up,borderWidth:2,pointRadius:0},
-      {label:"Aroon Down",data:ar.down,borderWidth:2,pointRadius:0}
+      {label:"Aroon Down",data:ar.down,borderWidth:2,pointRadius:0},
+      {label:"70",data:labels.map(()=>70),borderWidth:1,pointRadius:0,borderDash:[4,5]},
+      {label:"30",data:labels.map(()=>30),borderWidth:1,pointRadius:0,borderDash:[4,5]}
     ]},
-    options:baseOptions(0,100)
+    options:baseOptions(0,100,"Aroon")
   });
 
   replaceChart("stoch","stochChart",{
@@ -583,10 +599,10 @@ function renderCharts(){
     data:{labels,datasets:[
       {label:"%K",data:st.k,borderWidth:2,pointRadius:0},
       {label:"%D",data:st.d,borderWidth:2,pointRadius:0},
-      {label:"80",data:labels.map(()=>80),borderWidth:1,pointRadius:0,borderDash:[5,5]},
-      {label:"20",data:labels.map(()=>20),borderWidth:1,pointRadius:0,borderDash:[5,5]}
+      {label:"Upper range 80",data:labels.map(()=>80),borderWidth:1,pointRadius:0,borderDash:[5,5]},
+      {label:"Lower range 20",data:labels.map(()=>20),borderWidth:1,pointRadius:0,borderDash:[5,5]}
     ]},
-    options:baseOptions(0,100)
+    options:baseOptions(0,100,"Range position")
   });
 
   replaceChart("er","erChart",{
@@ -594,7 +610,7 @@ function renderCharts(){
     data:{labels,datasets:[
       {label:"Efficiency ratio",data:er,borderWidth:2,pointRadius:0}
     ]},
-    options:baseOptions(0,1)
+    options:baseOptions(0,1,"Efficiency")
   });
 
   return {p,s,vals,ar,st,er};
@@ -624,8 +640,8 @@ function renderPacket(x){
     `Kaufman ER(${x.p.er}): ${fmt(latestFinite(x.er),3)}`,
     "",
     "CROSS-CURRENCY CONTEXT",
-    `${base} 5-observation breadth: ${pct(currencyStrength(base))}`,
-    `${quote} 5-observation breadth: ${pct(currencyStrength(quote))}`,
+    `${base} 5-observation peer average: ${pct(currencyStrength(base))}`,
+    `${quote} 5-observation peer average: ${pct(currencyStrength(quote))}`,
     "",
     "PROFILE",
     pr.locked ? `Locked: ${pr.lockedAt}` : "Exploration / unlocked",
@@ -732,6 +748,14 @@ $("rangeSelect").addEventListener("change",fetchData);
 });
 
 $("saveProfileBtn").addEventListener("click",() => saveProfile(false));
+
+$("resetProfileBtn").addEventListener("click",() => {
+  const p = getProfile(selectedPair);
+  if(p.locked) return;
+  localStorage.setItem(profileKey(selectedPair), JSON.stringify(defaultProfile()));
+  applyProfile();
+  render();
+});
 
 $("lockProfileBtn").addEventListener("click",() => {
   const p = getProfile(selectedPair);
