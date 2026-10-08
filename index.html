@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
-  <title>FX Rotation Observatory</title>
+  <title>FX Rotation Lab</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <style>
     :root {
@@ -21,54 +21,114 @@
       --shadow: 0 12px 35px rgba(0,0,0,.25);
     }
     * { box-sizing: border-box; }
-    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
-    main { max-width: 1280px; margin: 0 auto; padding: 24px; }
-    header { display:flex; justify-content:space-between; align-items:flex-end; gap:20px; margin-bottom:18px; }
-    h1 { margin:0 0 6px; font-size: clamp(26px, 4vw, 42px); letter-spacing:-.035em; }
-    h2 { font-size:18px; margin:0; }
-    p { margin:0; }
-    .sub { color:var(--muted); max-width:760px; line-height:1.5; }
-    .status { color:var(--muted); font-size:13px; text-align:right; }
-    .controls, .panel { background:var(--panel); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); }
-    .controls { display:flex; flex-wrap:wrap; gap:12px; padding:14px; margin-bottom:16px; }
-    label { color:var(--muted); font-size:12px; display:grid; gap:6px; }
-    select, input, button, textarea { font:inherit; color:var(--text); background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:9px 10px; }
-    button { cursor:pointer; }
-    button:hover { border-color:var(--accent); }
-    .grid { display:grid; grid-template-columns: repeat(12, 1fr); gap:16px; }
-    .panel { padding:16px; }
-    .summary { grid-column:1/-1; }
-    .chart-main { grid-column: span 8; min-height:460px; }
-    .signals { grid-column: span 4; }
-    .indicator { grid-column: span 6; min-height:280px; }
-    .moves { grid-column:1/-1; }
-    .cards { display:grid; grid-template-columns:repeat(6,minmax(120px,1fr)); gap:10px; margin-top:12px; }
-    .card { background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:12px; cursor:pointer; }
-    .card:hover { border-color:var(--accent); }
-    .pair { font-weight:700; }
-    .rate { font-size:18px; margin-top:6px; }
-    .mini { color:var(--muted); font-size:12px; margin-top:7px; line-height:1.45; }
-    .pos { color:var(--good); }
-    .neg { color:var(--bad); }
-    .neutral { color:var(--muted); }
-    canvas { width:100% !important; }
-    .signalbox { margin-top:12px; display:grid; gap:10px; }
-    .signalrow { background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:12px; }
-    .signalrow b { display:block; margin-bottom:5px; }
-    .legend { color:var(--muted); font-size:12px; line-height:1.45; margin-top:8px; }
-    .formgrid { display:grid; grid-template-columns: repeat(7,1fr); gap:8px; margin-top:12px; }
-    .formgrid textarea { grid-column: span 2; resize:vertical; min-height:40px; }
-    table { width:100%; border-collapse:collapse; margin-top:14px; font-size:13px; }
-    th, td { padding:9px 8px; border-top:1px solid var(--line); text-align:left; }
-    th { color:var(--muted); font-weight:600; }
-    .foot { color:var(--muted); font-size:12px; margin-top:18px; line-height:1.55; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    main { max-width: 1180px; margin: 0 auto; padding: 24px; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      margin-bottom: 18px;
+    }
+    h1 { margin: 0 0 6px; font-size: clamp(26px, 4vw, 42px); letter-spacing: -.035em; }
+    h2 { font-size: 18px; margin: 0; }
+    p { margin: 0; }
+    .sub { color: var(--muted); max-width: 760px; line-height: 1.5; }
+    .status { color: var(--muted); font-size: 13px; text-align: right; }
+
+    .controls, .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    label { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
+    select, input, button, textarea {
+      font: inherit;
+      color: var(--text);
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 10px;
+    }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button:disabled { cursor: not-allowed; opacity: .55; }
+
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .panel { padding: 16px; }
+    .summary, .price, .indicator-wide, .packet, .moves { grid-column: 1 / -1; }
+
+    .heroPair { font-size: 30px; font-weight: 800; letter-spacing: -.03em; }
+    .legend { color: var(--muted); font-size: 12px; line-height: 1.45; margin-top: 8px; }
+
+    .contextStrip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .contextCell {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .contextCell strong { display: block; font-size: 15px; }
+    .contextCell span { color: var(--muted); font-size: 11px; }
+
+    .profileState { margin-top: 12px; color: var(--muted); font-size: 12px; }
+    .locked { color: var(--warn); }
+
+    .price { min-height: 360px; }
+    .indicator-wide { min-height: 330px; }
+    canvas { width: 100% !important; }
+
+    .packet textarea {
+      width: 100%;
+      min-height: 270px;
+      margin-top: 12px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .packetActions { display: flex; gap: 8px; margin-top: 10px; }
+
+    .formgrid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .formgrid textarea { grid-column: span 2; resize: vertical; min-height: 40px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
+    th, td { padding: 9px 8px; border-top: 1px solid var(--line); text-align: left; }
+    th { color: var(--muted); font-weight: 600; }
+
+    .foot { color: var(--muted); font-size: 12px; margin-top: 18px; line-height: 1.55; }
+    .pos { color: var(--good); }
+    .neg { color: var(--bad); }
+    .neutral { color: var(--muted); }
+
     @media (max-width: 900px) {
-      .chart-main,.signals,.indicator { grid-column:1/-1; }
-      .cards { grid-template-columns:repeat(2,1fr); }
-      .formgrid { grid-template-columns:1fr 1fr; }
-      .formgrid textarea { grid-column:1/-1; }
-      header { align-items:flex-start; flex-direction:column; }
-      .status { text-align:left; }
+      .contextStrip { grid-template-columns: repeat(2, 1fr); }
+      .formgrid { grid-template-columns: 1fr 1fr; }
+      .formgrid textarea { grid-column: 1 / -1; }
+      header { align-items: flex-start; flex-direction: column; }
+      .status { text-align: left; }
     }
   </style>
 </head>
@@ -76,8 +136,8 @@
 <main>
   <header>
     <div>
-      <h1>FX Rotation Observatory</h1>
-      <p class="sub">USD · CHF · EUR · JPY — read-only market observation, simple momentum and mean-reversion indicators, plus a local move journal. Reference rates are not executable broker quotes.</p>
+      <h1>FX Rotation Lab</h1>
+      <p class="sub">One pair at a time. Indicators first. Cross-currency context stays in peripheral view. Reference rates are observational, not executable broker quotes.</p>
     </div>
     <div class="status" id="status">Loading ECB reference-rate history…</div>
   </header>
@@ -86,67 +146,89 @@
     <label>Pair
       <select id="pairSelect"></select>
     </label>
+
     <label>History
       <select id="rangeSelect">
-        <option value="90">90 days</option>
-        <option value="180" selected>180 days</option>
-        <option value="365">1 year</option>
+        <option value="180">6 months</option>
+        <option value="365" selected>1 year</option>
         <option value="730">2 years</option>
       </select>
     </label>
-    <label>Momentum lookback
-      <select id="momLookback">
-        <option value="5">5 days</option>
-        <option value="10" selected>10 days</option>
-        <option value="20">20 days</option>
-      </select>
+
+    <label>Aroon period
+      <input id="aroonPeriod" type="number" min="5" max="120" value="25" />
     </label>
-    <label>Mean-reversion window
-      <select id="zWindow">
-        <option value="10">10 days</option>
-        <option value="20" selected>20 days</option>
-        <option value="40">40 days</option>
-      </select>
+
+    <label>Stochastic period
+      <input id="stochPeriod" type="number" min="5" max="120" value="14" />
     </label>
-    <label>&nbsp;
+
+    <label>Stoch smooth
+      <input id="stochSmooth" type="number" min="1" max="20" value="3" />
+    </label>
+
+    <label>Efficiency period
+      <input id="erPeriod" type="number" min="2" max="120" value="20" />
+    </label>
+
+    <label><span>&nbsp;</span>
+      <button id="saveProfileBtn">Save pair profile</button>
+    </label>
+
+    <label><span>&nbsp;</span>
+      <button id="lockProfileBtn">Lock profile</button>
+    </label>
+
+    <label><span>&nbsp;</span>
       <button id="refreshBtn">Refresh data</button>
     </label>
   </section>
 
   <div class="grid">
     <section class="panel summary">
-      <h2>Six-pair snapshot</h2>
-      <p class="legend">Each cross-rate is derived from the same EUR-based ECB reference-rate observations. A positive return means the quoted currency per unit of base currency increased.</p>
-      <div class="cards" id="cards"></div>
+      <div class="heroPair" id="heroPair">USD/CHF</div>
+      <p class="legend">Cross context is intentionally small: it helps distinguish broad currency strength/weakness from a move isolated to the selected pair.</p>
+      <div class="contextStrip" id="contextStrip"></div>
+      <div class="profileState" id="profileState"></div>
     </section>
 
-    <section class="panel chart-main">
+    <section class="panel price">
       <h2 id="priceTitle">Pair history</h2>
-      <p class="legend">Price with 20-observation simple moving average.</p>
+      <p class="legend">Price is context. The analytical emphasis is on the indicator panels below.</p>
       <canvas id="priceChart"></canvas>
     </section>
 
-    <section class="panel signals">
-      <h2>Indicator reading</h2>
-      <div class="signalbox" id="signalBox"></div>
-      <p class="legend">These are observations, not trade instructions. Parameters are deliberately visible so they can later be tested rather than tuned silently.</p>
+    <section class="panel indicator-wide">
+      <h2>Aroon</h2>
+      <p class="legend">Recency of the highest and lowest observations inside this pair's saved period. Aroon Up and Aroon Down are descriptive, not buy/sell commands.</p>
+      <canvas id="aroonChart"></canvas>
     </section>
 
-    <section class="panel indicator">
-      <h2>Momentum</h2>
-      <p class="legend">Percentage change over the selected lookback: 100 × (Pₜ / Pₜ₋ₖ − 1).</p>
-      <canvas id="momChart"></canvas>
+    <section class="panel indicator-wide">
+      <h2>Stochastic</h2>
+      <p class="legend">Position of the current reference rate inside its recent observed range. ECB reference-rate history does not provide intraday high/low, so this version uses rolling daily closes rather than a textbook OHLC stochastic.</p>
+      <canvas id="stochChart"></canvas>
     </section>
 
-    <section class="panel indicator">
-      <h2>Mean reversion</h2>
-      <p class="legend">Rolling z-score: (Pₜ − rolling mean) / rolling standard deviation. Large absolute values flag unusual displacement; they do not prove reversal.</p>
-      <canvas id="zChart"></canvas>
+    <section class="panel indicator-wide">
+      <h2>Kaufman efficiency ratio</h2>
+      <p class="legend">Absolute net movement divided by total path movement. Near 1 means relatively directional travel; near 0 means a noisy path. It measures efficiency, not direction.</p>
+      <canvas id="erChart"></canvas>
+    </section>
+
+    <section class="panel packet">
+      <h2>Copy for ChatGPT</h2>
+      <p class="legend">The page computes the snapshot deterministically. No API key, embedded model, or backend is required.</p>
+      <textarea id="analysisPacket" readonly></textarea>
+      <div class="packetActions">
+        <button id="copyPacketBtn">Copy analysis packet</button>
+      </div>
     </section>
 
     <section class="panel moves">
       <h2>Move journal</h2>
-      <p class="legend">Manual record only. Saved in this browser with localStorage; nothing is sent to a server. This is not yet the accounting engine.</p>
+      <p class="legend">Manual record only. Saved in this browser with localStorage; nothing is sent to a server. This is not yet a trading/accounting engine.</p>
+
       <form id="moveForm" class="formgrid">
         <input id="moveDate" type="datetime-local" required />
         <select id="moveFrom"><option>USD</option><option>CHF</option><option>EUR</option><option>JPY</option></select>
@@ -157,18 +239,26 @@
         <textarea id="moveNote" placeholder="Reason / note"></textarea>
         <button type="submit">Add move</button>
       </form>
+
       <table>
-        <thead><tr><th>Time</th><th>From</th><th>To</th><th>Amount sold</th><th>Rate</th><th>Fee</th><th>Note</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <th>Time</th><th>From</th><th>To</th><th>Amount sold</th>
+            <th>Rate</th><th>Fee</th><th>Note</th><th></th>
+          </tr>
+        </thead>
         <tbody id="moveRows"></tbody>
       </table>
     </section>
   </div>
 
-  <p class="foot">Source: Frankfurter API pinned to the European Central Bank provider. Daily ECB reference rates are intended here for observation and reproducible historical indicators. They are not broker bid/ask prices and do not include spreads, commissions, funding restrictions, settlement effects, or interest. Cross-rates are derived algebraically from synchronized EUR reference rates.</p>
+  <p class="foot">Source: Frankfurter API pinned to the European Central Bank provider. Daily ECB reference rates are used for observation and reproducible historical indicators. They are not broker bid/ask prices and do not include spreads, commissions, funding restrictions, settlement effects, or interest. Cross-rates are derived algebraically from synchronized EUR reference rates.</p>
 </main>
+
 <script>
 const PAIRS = ["USD/CHF","USD/EUR","USD/JPY","EUR/CHF","EUR/JPY","CHF/JPY"];
 const CURRENCIES = ["EUR","USD","CHF","JPY"];
+
 let rawSeries = {};
 let selectedPair = "USD/CHF";
 let charts = {};
@@ -178,119 +268,475 @@ const fmt = (v, d=5) => Number.isFinite(v) ? v.toLocaleString(undefined,{maximum
 const pct = v => Number.isFinite(v) ? `${v>=0?"+":""}${v.toFixed(2)}%` : "—";
 const cls = v => !Number.isFinite(v)||Math.abs(v)<1e-12 ? "neutral" : v>0 ? "pos" : "neg";
 
-function dateDaysAgo(days){ const d=new Date(); d.setDate(d.getDate()-days); return d.toISOString().slice(0,10); }
+function dateDaysAgo(days){
+  const d = new Date();
+  d.setDate(d.getDate()-days);
+  return d.toISOString().slice(0,10);
+}
 
-function rateFromEur(row, ccy){ return ccy === "EUR" ? 1 : row[ccy]; }
+function rateFromEur(row, ccy){
+  return ccy === "EUR" ? 1 : row[ccy];
+}
+
 function cross(row, pair){
-  const [base,quote]=pair.split("/");
+  const [base,quote] = pair.split("/");
   return rateFromEur(row, quote) / rateFromEur(row, base);
 }
-function sma(vals,n){ return vals.map((_,i)=> i<n-1 ? null : vals.slice(i-n+1,i+1).reduce((a,b)=>a+b,0)/n); }
-function rollingStd(vals,n,means){
-  return vals.map((_,i)=>{
-    if(i<n-1) return null;
-    const s=vals.slice(i-n+1,i+1), m=means[i];
-    const variance=s.reduce((a,b)=>a+(b-m)**2,0)/s.length;
-    return Math.sqrt(variance);
-  });
+
+function latestFinite(arr){
+  for(let i=arr.length-1;i>=0;i--) if(Number.isFinite(arr[i])) return arr[i];
+  return null;
 }
-function returns(vals,k){ return vals.map((v,i)=>i<k?null:100*(v/vals[i-k]-1)); }
-function zscores(vals,n){ const m=sma(vals,n), sd=rollingStd(vals,n,m); return vals.map((v,i)=>sd[i] && sd[i]>0 ? (v-m[i])/sd[i] : null); }
-function latestFinite(arr){ for(let i=arr.length-1;i>=0;i--) if(Number.isFinite(arr[i])) return arr[i]; return null; }
 
 async function fetchData(){
   const days = Number($("rangeSelect").value);
   $("status").textContent = "Loading ECB reference-rate history…";
-  const url = `https://api.frankfurter.dev/v2/rates?from=${dateDaysAgo(days+50)}&quotes=USD,CHF,JPY&providers=ecb`;
+
+  const url = `https://api.frankfurter.dev/v2/rates?from=${dateDaysAgo(days+60)}&quotes=USD,CHF,JPY&providers=ecb`;
   const res = await fetch(url);
   if(!res.ok) throw new Error(`HTTP ${res.status}`);
+
   const rows = await res.json();
   const byDate = new Map();
+
   for(const r of rows){
     if(!byDate.has(r.date)) byDate.set(r.date,{});
     byDate.get(r.date)[r.quote] = r.rate;
   }
-  const normalized=[...byDate.entries()]
-    .filter(([,r])=>r.USD&&r.CHF&&r.JPY)
-    .sort(([a],[b])=>a.localeCompare(b))
-    .map(([date,r])=>({date,...r}));
-  rawSeries={};
-  for(const p of PAIRS) rawSeries[p]=normalized.map(r=>({date:r.date,value:cross(r,p)}));
-  const last=normalized.at(-1)?.date || "unknown";
-  $("status").textContent=`ECB provider · last observation ${last} · retrieved ${new Date().toLocaleString()}`;
+
+  const normalized = [...byDate.entries()]
+    .filter(([,r]) => r.USD && r.CHF && r.JPY)
+    .sort(([a],[b]) => a.localeCompare(b))
+    .map(([date,r]) => ({date,...r}));
+
+  rawSeries = {};
+  for(const p of PAIRS){
+    rawSeries[p] = normalized.map(r => ({date:r.date,value:cross(r,p)}));
+  }
+
+  const last = normalized.at(-1)?.date || "unknown";
+  $("status").textContent = `ECB provider · last observation ${last} · retrieved ${new Date().toLocaleString()}`;
   render();
 }
 
 function visibleSeries(pair){
-  const days=Number($("rangeSelect").value);
-  const cutoff=dateDaysAgo(days);
-  return (rawSeries[pair]||[]).filter(x=>x.date>=cutoff);
+  const days = Number($("rangeSelect").value);
+  const cutoff = dateDaysAgo(days);
+  return (rawSeries[pair] || []).filter(x => x.date >= cutoff);
 }
 
-function renderCards(){
-  const momK=Number($("momLookback").value), zN=Number($("zWindow").value);
-  $("cards").innerHTML=PAIRS.map(p=>{
-    const s=visibleSeries(p), vals=s.map(x=>x.value);
-    const m=latestFinite(returns(vals,momK)), z=latestFinite(zscores(vals,zN));
-    const last=vals.at(-1);
-    return `<div class="card" data-pair="${p}"><div class="pair">${p}</div><div class="rate">${fmt(last,last>20?3:5)}</div><div class="mini">Momentum <span class="${cls(m)}">${pct(m)}</span><br>Z-score <span class="${cls(z)}">${Number.isFinite(z)?z.toFixed(2):"—"}</span></div></div>`;
-  }).join("");
-  document.querySelectorAll(".card").forEach(el=>el.addEventListener("click",()=>{selectedPair=el.dataset.pair;$("pairSelect").value=selectedPair;render();}));
+function profileKey(pair){ return "fxProfile:" + pair; }
+
+function defaultProfile(){
+  return {aroon:25, stoch:14, smooth:3, er:20, locked:false, lockedAt:null};
 }
 
-function replaceChart(key,canvasId,config){ if(charts[key]) charts[key].destroy(); charts[key]=new Chart($(canvasId),config); }
-function baseOptions(){ return {responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{color:"#cbd5e1"}}},scales:{x:{ticks:{color:"#95a3b3",maxTicksLimit:8},grid:{color:"rgba(149,163,179,.08)"}},y:{ticks:{color:"#95a3b3"},grid:{color:"rgba(149,163,179,.10)"}}}}; }
+function getProfile(pair){
+  try {
+    return {...defaultProfile(), ...JSON.parse(localStorage.getItem(profileKey(pair)) || "{}")};
+  } catch {
+    return defaultProfile();
+  }
+}
+
+function readControls(){
+  return {
+    aroon: Number($("aroonPeriod").value),
+    stoch: Number($("stochPeriod").value),
+    smooth: Number($("stochSmooth").value),
+    er: Number($("erPeriod").value)
+  };
+}
+
+function applyProfile(){
+  const p = getProfile(selectedPair);
+
+  $("aroonPeriod").value = p.aroon;
+  $("stochPeriod").value = p.stoch;
+  $("stochSmooth").value = p.smooth;
+  $("erPeriod").value = p.er;
+
+  const inputs = [$("aroonPeriod"),$("stochPeriod"),$("stochSmooth"),$("erPeriod")];
+  inputs.forEach(x => x.disabled = p.locked);
+
+  $("saveProfileBtn").disabled = p.locked;
+  $("lockProfileBtn").textContent = p.locked ? "Unlock for exploration" : "Lock profile";
+  $("profileState").className = p.locked ? "profileState locked" : "profileState";
+  $("profileState").textContent = p.locked
+    ? `LOCKED · ${p.lockedAt || ""}`
+    : "EXPLORATION · parameters editable";
+}
+
+function saveProfile(lock=false){
+  const old = getProfile(selectedPair);
+  const v = readControls();
+  const p = {
+    ...old,
+    ...v,
+    locked: lock,
+    lockedAt: lock ? new Date().toISOString() : null
+  };
+  localStorage.setItem(profileKey(selectedPair), JSON.stringify(p));
+  applyProfile();
+  render();
+}
+
+function aroon(vals,n){
+  const up = [], down = [];
+  for(let i=0;i<vals.length;i++){
+    if(i<n-1){
+      up.push(null);
+      down.push(null);
+      continue;
+    }
+
+    const w = vals.slice(i-n+1,i+1);
+    const hi = Math.max(...w);
+    const lo = Math.min(...w);
+    const hiIdx = w.lastIndexOf(hi);
+    const loIdx = w.lastIndexOf(lo);
+
+    up.push(100 * hiIdx / (n-1));
+    down.push(100 * loIdx / (n-1));
+  }
+  return {up,down};
+}
+
+function stochastic(vals,n,smooth){
+  const k = vals.map((v,i) => {
+    if(i<n-1) return null;
+
+    const w = vals.slice(i-n+1,i+1);
+    const lo = Math.min(...w);
+    const hi = Math.max(...w);
+
+    return hi === lo ? 50 : 100 * (v-lo) / (hi-lo);
+  });
+
+  const d = k.map((_,i) => {
+    if(i<smooth-1) return null;
+    const w = k.slice(i-smooth+1,i+1).filter(Number.isFinite);
+    return w.length === smooth ? w.reduce((a,b)=>a+b,0)/smooth : null;
+  });
+
+  return {k,d};
+}
+
+function efficiency(vals,n){
+  return vals.map((v,i) => {
+    if(i<n) return null;
+
+    const net = Math.abs(v - vals[i-n]);
+    let path = 0;
+
+    for(let j=i-n+1;j<=i;j++){
+      path += Math.abs(vals[j] - vals[j-1]);
+    }
+
+    return path ? net/path : 0;
+  });
+}
+
+function pairReturn(pair,k=5){
+  const v = visibleSeries(pair).map(x => x.value);
+  return v.length > k ? 100 * (v.at(-1)/v.at(-1-k)-1) : null;
+}
+
+function currencyStrength(ccy,k=5){
+  const peers = CURRENCIES.filter(x => x !== ccy);
+  const rs = [];
+
+  for(const peer of peers){
+    const direct = `${ccy}/${peer}`;
+    const inverse = `${peer}/${ccy}`;
+    const p = PAIRS.includes(direct) ? direct : inverse;
+
+    let r = pairReturn(p,k);
+
+    if(p === inverse && Number.isFinite(r)){
+      r = 100 * ((1/(1+r/100))-1);
+    }
+
+    if(Number.isFinite(r)) rs.push(r);
+  }
+
+  return rs.length ? rs.reduce((a,b)=>a+b,0)/rs.length : null;
+}
+
+function renderContext(){
+  const [base,quote] = selectedPair.split("/");
+  const bs = currencyStrength(base);
+  const qs = currencyStrength(quote);
+
+  const related = PAIRS
+    .filter(p => p !== selectedPair && (p.includes(base) || p.includes(quote)))
+    .map(p => ({p,r:pairReturn(p)}))
+    .sort((a,b) => Math.abs(b.r || 0)-Math.abs(a.r || 0))
+    .slice(0,2);
+
+  const cells = [
+    {name:`${base} breadth · 5 obs`, value:pct(bs), n:bs},
+    {name:`${quote} breadth · 5 obs`, value:pct(qs), n:qs},
+    ...related.map(x => ({name:`${x.p} · 5 obs`,value:pct(x.r),n:x.r}))
+  ];
+
+  $("contextStrip").innerHTML = cells.map(x =>
+    `<div class="contextCell">
+      <strong>${x.name}</strong>
+      <span class="${cls(x.n)}">${x.value}</span>
+    </div>`
+  ).join("");
+}
+
+function replaceChart(key,canvasId,config){
+  if(charts[key]) charts[key].destroy();
+  charts[key] = new Chart($(canvasId),config);
+}
+
+function baseOptions(yMin=null,yMax=null){
+  const y = {
+    ticks:{color:"#95a3b3"},
+    grid:{color:"rgba(149,163,179,.10)"}
+  };
+
+  if(Number.isFinite(yMin)) y.min = yMin;
+  if(Number.isFinite(yMax)) y.max = yMax;
+
+  return {
+    responsive:true,
+    maintainAspectRatio:false,
+    interaction:{mode:"index",intersect:false},
+    plugins:{legend:{labels:{color:"#cbd5e1"}}},
+    scales:{
+      x:{ticks:{color:"#95a3b3",maxTicksLimit:8},grid:{color:"rgba(149,163,179,.08)"}},
+      y
+    }
+  };
+}
 
 function renderCharts(){
-  const s=visibleSeries(selectedPair), labels=s.map(x=>x.date), vals=s.map(x=>x.value);
-  const m20=sma(vals,20), mom=returns(vals,Number($("momLookback").value)), z=zscores(vals,Number($("zWindow").value));
-  $("priceTitle").textContent=`${selectedPair} history`;
-  replaceChart("price","priceChart",{type:"line",data:{labels,datasets:[{label:selectedPair,data:vals,borderWidth:2,pointRadius:0,tension:.08},{label:"SMA 20",data:m20,borderWidth:1.5,pointRadius:0,tension:.08}]},options:baseOptions()});
-  replaceChart("mom","momChart",{type:"line",data:{labels,datasets:[{label:`${$("momLookback").value}-day return %`,data:mom,borderWidth:2,pointRadius:0}]},options:baseOptions()});
-  replaceChart("z","zChart",{type:"line",data:{labels,datasets:[{label:`${$("zWindow").value}-day z-score`,data:z,borderWidth:2,pointRadius:0},{label:"+2",data:labels.map(()=>2),borderWidth:1,pointRadius:0,borderDash:[5,5]},{label:"-2",data:labels.map(()=>-2),borderWidth:1,pointRadius:0,borderDash:[5,5]}]},options:baseOptions()});
+  const p = readControls();
+  const s = visibleSeries(selectedPair);
+  const labels = s.map(x => x.date);
+  const vals = s.map(x => x.value);
+
+  const ar = aroon(vals,p.aroon);
+  const st = stochastic(vals,p.stoch,p.smooth);
+  const er = efficiency(vals,p.er);
+
+  $("heroPair").textContent = `${selectedPair} · ${fmt(vals.at(-1), vals.at(-1)>20 ? 3 : 5)}`;
+  $("priceTitle").textContent = `${selectedPair} history`;
+
+  replaceChart("price","priceChart",{
+    type:"line",
+    data:{labels,datasets:[
+      {label:selectedPair,data:vals,borderWidth:2,pointRadius:0,tension:.08}
+    ]},
+    options:baseOptions()
+  });
+
+  replaceChart("aroon","aroonChart",{
+    type:"line",
+    data:{labels,datasets:[
+      {label:"Aroon Up",data:ar.up,borderWidth:2,pointRadius:0},
+      {label:"Aroon Down",data:ar.down,borderWidth:2,pointRadius:0}
+    ]},
+    options:baseOptions(0,100)
+  });
+
+  replaceChart("stoch","stochChart",{
+    type:"line",
+    data:{labels,datasets:[
+      {label:"%K",data:st.k,borderWidth:2,pointRadius:0},
+      {label:"%D",data:st.d,borderWidth:2,pointRadius:0},
+      {label:"80",data:labels.map(()=>80),borderWidth:1,pointRadius:0,borderDash:[5,5]},
+      {label:"20",data:labels.map(()=>20),borderWidth:1,pointRadius:0,borderDash:[5,5]}
+    ]},
+    options:baseOptions(0,100)
+  });
+
+  replaceChart("er","erChart",{
+    type:"line",
+    data:{labels,datasets:[
+      {label:"Efficiency ratio",data:er,borderWidth:2,pointRadius:0}
+    ]},
+    options:baseOptions(0,1)
+  });
+
+  return {p,s,vals,ar,st,er};
 }
 
-function renderSignals(){
-  const s=visibleSeries(selectedPair), vals=s.map(x=>x.value), k=Number($("momLookback").value), n=Number($("zWindow").value);
-  const m=latestFinite(returns(vals,k)), z=latestFinite(zscores(vals,n));
-  const momText = !Number.isFinite(m) ? "Insufficient history" : m>0 ? `Base currency strengthened ${Math.abs(m).toFixed(2)}% versus quote currency over ${k} observations.` : m<0 ? `Base currency weakened ${Math.abs(m).toFixed(2)}% versus quote currency over ${k} observations.` : "No change over lookback.";
-  const zText = !Number.isFinite(z) ? "Insufficient history" : Math.abs(z)>=2 ? `Unusually displaced versus its ${n}-observation window (z=${z.toFixed(2)}).` : Math.abs(z)>=1 ? `Moderately displaced versus its ${n}-observation window (z=${z.toFixed(2)}).` : `Near its recent mean (z=${z.toFixed(2)}).`;
-  $("signalBox").innerHTML=`
-    <div class="signalrow"><b>Momentum observation</b><span class="${cls(m)}">${momText}</span></div>
-    <div class="signalrow"><b>Mean-reversion observation</b><span class="${cls(z)}">${zText}</span></div>
-    <div class="signalrow"><b>Conflict check</b>${Number.isFinite(m)&&Number.isFinite(z) ? (Math.sign(m)===Math.sign(z) ? " Momentum and displacement point in the same current direction; a momentum hypothesis and a reversion hypothesis would therefore imply different future expectations." : " Momentum and displacement do not reinforce the same current direction; no simple combined inference should be made.") : " Insufficient history."}</div>`;
+function renderPacket(x){
+  const [base,quote] = selectedPair.split("/");
+  const last = x.s.at(-1);
+  const pr = getProfile(selectedPair);
+
+  const lines = [
+    "FX Rotation Lab snapshot",
+    `Pair: ${selectedPair}`,
+    `Observation date: ${last?.date || "—"}`,
+    `Retrieved: ${new Date().toISOString()}`,
+    "Data source: ECB daily reference rates via Frankfurter",
+    "Execution warning: reference rates are not executable broker bid/ask quotes",
+    "",
+    "PAIR",
+    `Rate: ${fmt(x.vals.at(-1),8)}`,
+    `5-observation return: ${pct(pairReturn(selectedPair,5))}`,
+    `20-observation return: ${pct(pairReturn(selectedPair,20))}`,
+    "",
+    "INDICATORS",
+    `Aroon(${x.p.aroon}): Up ${fmt(latestFinite(x.ar.up),1)} / Down ${fmt(latestFinite(x.ar.down),1)}`,
+    `Stochastic-close(${x.p.stoch},${x.p.smooth}): %K ${fmt(latestFinite(x.st.k),1)} / %D ${fmt(latestFinite(x.st.d),1)}`,
+    `Kaufman ER(${x.p.er}): ${fmt(latestFinite(x.er),3)}`,
+    "",
+    "CROSS-CURRENCY CONTEXT",
+    `${base} 5-observation breadth: ${pct(currencyStrength(base))}`,
+    `${quote} 5-observation breadth: ${pct(currencyStrength(quote))}`,
+    "",
+    "PROFILE",
+    pr.locked ? `Locked: ${pr.lockedAt}` : "Exploration / unlocked",
+    "",
+    "Please interpret this observationally.",
+    "Distinguish trend, range position, path efficiency, and cross-currency context.",
+    "Point out conflicts between indicators.",
+    "State what evidence would weaken the interpretation.",
+    "Do not infer executable profit from ECB reference rates.",
+    "Do not assume leverage, derivatives, or short positions.",
+    "Do not turn this into a trade recommendation unless explicitly asked."
+  ];
+
+  $("analysisPacket").value = lines.join("\n");
 }
 
-function render(){ renderCards(); renderCharts(); renderSignals(); }
+function render(){
+  if(!rawSeries[selectedPair]?.length) return;
+  renderContext();
+  const x = renderCharts();
+  renderPacket(x);
+}
 
-function initPairs(){ $("pairSelect").innerHTML=PAIRS.map(p=>`<option>${p}</option>`).join(""); $("pairSelect").value=selectedPair; }
+function initPairs(){
+  $("pairSelect").innerHTML = PAIRS.map(p => `<option>${p}</option>`).join("");
+  $("pairSelect").value = selectedPair;
+}
 
-function loadMoves(){ return JSON.parse(localStorage.getItem("fxMoves")||"[]"); }
-function saveMoves(m){ localStorage.setItem("fxMoves",JSON.stringify(m)); renderMoves(); }
+function loadMoves(){
+  return JSON.parse(localStorage.getItem("fxMoves") || "[]");
+}
+
+function saveMoves(m){
+  localStorage.setItem("fxMoves",JSON.stringify(m));
+  renderMoves();
+}
+
 function renderMoves(){
-  const rows=loadMoves();
-  $("moveRows").innerHTML=rows.length?rows.map((r,i)=>`<tr><td>${r.date}</td><td>${r.from}</td><td>${r.to}</td><td>${r.amount}</td><td>${r.rate}</td><td>${r.fee}</td><td>${r.note||""}</td><td><button data-del="${i}">×</button></td></tr>`).join(""):`<tr><td colspan="8" class="neutral">No recorded moves.</td></tr>`;
-  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const x=loadMoves();x.splice(Number(b.dataset.del),1);saveMoves(x);});
+  const rows = loadMoves();
+
+  $("moveRows").innerHTML = rows.length
+    ? rows.map((r,i) => `<tr>
+        <td>${r.date}</td><td>${r.from}</td><td>${r.to}</td>
+        <td>${r.amount}</td><td>${r.rate}</td><td>${r.fee}</td>
+        <td>${r.note || ""}</td>
+        <td><button data-del="${i}">×</button></td>
+      </tr>`).join("")
+    : `<tr><td colspan="8" class="neutral">No recorded moves.</td></tr>`;
+
+  document.querySelectorAll("[data-del]").forEach(b => {
+    b.onclick = () => {
+      const x = loadMoves();
+      x.splice(Number(b.dataset.del),1);
+      saveMoves(x);
+    };
+  });
 }
 
-$("moveForm").addEventListener("submit",e=>{
+$("moveForm").addEventListener("submit",e => {
   e.preventDefault();
-  const from=$("moveFrom").value,to=$("moveTo").value;
-  if(from===to){ alert("From and To currencies must differ."); return; }
-  const moves=loadMoves();
-  moves.unshift({date:$("moveDate").value,from,to,amount:$("moveAmount").value,rate:$("moveRate").value,fee:$("moveFee").value,note:$("moveNote").value.trim()});
-  saveMoves(moves); e.target.reset(); $("moveFee").value="0"; setDefaultDate();
-});
-function setDefaultDate(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); $("moveDate").value=d.toISOString().slice(0,16); }
 
-$("pairSelect").addEventListener("change",e=>{selectedPair=e.target.value;render();});
+  const from = $("moveFrom").value;
+  const to = $("moveTo").value;
+
+  if(from === to){
+    alert("From and To currencies must differ.");
+    return;
+  }
+
+  const moves = loadMoves();
+
+  moves.unshift({
+    date:$("moveDate").value,
+    from,
+    to,
+    amount:$("moveAmount").value,
+    rate:$("moveRate").value,
+    fee:$("moveFee").value,
+    note:$("moveNote").value.trim()
+  });
+
+  saveMoves(moves);
+  e.target.reset();
+  $("moveFee").value = "0";
+  setDefaultDate();
+});
+
+function setDefaultDate(){
+  const d = new Date();
+  d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+  $("moveDate").value = d.toISOString().slice(0,16);
+}
+
+$("pairSelect").addEventListener("change",e => {
+  selectedPair = e.target.value;
+  applyProfile();
+  render();
+});
+
 $("rangeSelect").addEventListener("change",fetchData);
-$("momLookback").addEventListener("change",render);
-$("zWindow").addEventListener("change",render);
+
+["aroonPeriod","stochPeriod","stochSmooth","erPeriod"].forEach(id => {
+  $(id).addEventListener("input",render);
+});
+
+$("saveProfileBtn").addEventListener("click",() => saveProfile(false));
+
+$("lockProfileBtn").addEventListener("click",() => {
+  const p = getProfile(selectedPair);
+
+  if(p.locked){
+    localStorage.setItem(profileKey(selectedPair),JSON.stringify({
+      ...p,
+      locked:false,
+      lockedAt:null
+    }));
+    applyProfile();
+    render();
+  } else {
+    saveProfile(true);
+  }
+});
+
+$("copyPacketBtn").addEventListener("click",async () => {
+  try {
+    await navigator.clipboard.writeText($("analysisPacket").value);
+    $("copyPacketBtn").textContent = "Copied";
+    setTimeout(() => $("copyPacketBtn").textContent = "Copy analysis packet",1200);
+  } catch {
+    $("analysisPacket").select();
+    document.execCommand("copy");
+  }
+});
+
 $("refreshBtn").addEventListener("click",fetchData);
 
-initPairs(); setDefaultDate(); renderMoves();
-fetchData().catch(err=>{ $("status").textContent=`Data load failed: ${err.message}`; console.error(err); });
+initPairs();
+applyProfile();
+setDefaultDate();
+renderMoves();
+
+fetchData().catch(err => {
+  $("status").textContent = `Data load failed: ${err.message}`;
+  console.error(err);
+});
 </script>
 </body>
 </html>
