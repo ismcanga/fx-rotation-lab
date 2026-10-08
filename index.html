@@ -93,10 +93,35 @@
     .locked { color: var(--warn); }
 
     .price, .indicator-wide { min-height: 0; }
-    .chartBox { position: relative; width: 100%; height: 300px; margin-top: 10px; overflow: hidden; }
-    .price .chartBox { height: 320px; }
-    .indicator-wide .chartBox { height: 260px; }
-    .chartBox canvas { display: block; width: 100% !important; height: 100% !important; }
+    .chartBox {
+      position: relative;
+      width: 100%;
+      height: 300px;
+      min-height: 300px;
+      max-height: 300px;
+      margin-top: 10px;
+      overflow: hidden;
+      contain: layout size;
+    }
+    .price .chartBox {
+      height: 320px;
+      min-height: 320px;
+      max-height: 320px;
+    }
+    .indicator-wide .chartBox {
+      height: 260px;
+      min-height: 260px;
+      max-height: 260px;
+    }
+    .chartBox canvas {
+      position: absolute !important;
+      inset: 0;
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+    }
 
     .packet textarea {
       width: 100%;
@@ -124,6 +149,11 @@
     .pos { color: var(--good); }
     .neg { color: var(--bad); }
     .neutral { color: var(--muted); }
+
+    @supports (-webkit-touch-callout: none) {
+      .chartBox { flex: none; }
+      .chartBox canvas { min-height: 0 !important; }
+    }
 
     @media (max-width: 900px) {
       .contextStrip { grid-template-columns: repeat(2, 1fr); }
@@ -507,6 +537,8 @@ function baseOptions(yMin=null,yMax=null){
   return {
     responsive:true,
     maintainAspectRatio:false,
+    animation:false,
+    resizeDelay:100,
     interaction:{mode:"index",intersect:false},
     plugins:{legend:{labels:{color:"#cbd5e1"}}},
     scales:{
