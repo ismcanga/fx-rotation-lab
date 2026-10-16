@@ -1052,20 +1052,32 @@ function baseOptions(yMin=null,yMax=null,yTitle=""){
     animation:false,
     resizeDelay:100,
     interaction:{mode:"index",intersect:false},
-    onHover(event,active){
+    onHover(event,active,chart){
       if(linkedCursorPinned) return;
 
-      const index = active?.[0]?.index;
+      const xScale = chart.scales.x;
+      if(!xScale) return;
+
+      const rawIndex = xScale.getValueForPixel(event.x);
+      const index = Math.round(rawIndex);
+
+      const count = chart.data.labels?.length || 0;
 
       setLinkedCursor(
-        Number.isInteger(index) ? index : null,
+        index >= 0 && index < count ? index : null,
         {pinned:false}
       );
     },
 
-    onClick(event,active){
-      const index = active?.[0]?.index;
-      if(!Number.isInteger(index)) return;
+    onClick(event,active,chart){
+      const xScale = chart.scales.x;
+      if(!xScale) return;
+
+      const rawIndex = xScale.getValueForPixel(event.x);
+      const index = Math.round(rawIndex);
+
+      const count = chart.data.labels?.length || 0;
+      if(index < 0 || index >= count) return;
 
       if(
         linkedCursorPinned &&
