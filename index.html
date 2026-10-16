@@ -182,7 +182,7 @@
   <header>
     <div>
       <h1>FX Rotation Lab</h1>
-      <p class="sub">One pair at a time. Read the price, the extremes, the range position, and how cleanly the move travelled.</p>
+      <p class="sub">Price, range, direction and path efficiency.</p>
     </div>
     <div class="status" id="status">Loading ECB reference-rate history…</div>
   </header>
@@ -246,7 +246,7 @@
   <div class="grid">
     <section class="panel summary">
       <div class="heroPair" id="heroPair">USD/CHF</div>
-      <p class="legend">Peer context stays small: it helps show whether the selected move is broad or mostly isolated to this pair.</p>
+      <p class="legend">Cross-currency context.</p>
       <div class="contextStrip" id="contextStrip"></div>
       <div class="profileState" id="profileState"></div>
       <div class="profileState" id="researchState"></div>
@@ -934,6 +934,81 @@ function pairReturn(pair,k=5){
   return v.length > k ? 100 * (v.at(-1)/v.at(-1-k)-1) : null;
 }
 
+function utcShiftDate(dateString,{days=0,months=0,years=0}={}){
+  const d = new Date(`${dateString}T00:00:00Z`);
+  d.setUTCFullYear(d.getUTCFullYear() - years);
+  d.setUTCMonth(d.getUTCMonth() - months);
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0,10);
+}
+
+function valueOnOrBefore(series,dateString){
+  for(let i=series.length-1;i>=0;i--){
+    if(series[i].date <= dateString){
+      return series[i].close;
+    }
+  }
+  return null;
+}
+
+function calendarReturn(series,offset){
+  const last = series.at(-1);
+  if(!last) return null;
+
+  const prior = valueOnOrBefore(
+    series,
+    utcShiftDate(last.date,offset)
+  );
+
+  return Number.isFinite(prior) && prior !== 0
+    ? 100 * (last.close / prior - 1)
+    : null;
+}
+
+function instrumentMetrics(id){
+  const series = rawSeries[id] || [];
+  const last = series.at(-1);
+
+  if(!last){
+    return null;
+  }
+
+  const previous = series.at(-2);
+
+  const recent = series.slice(-20);
+  const recentHigh = recent.length
+    ? Math.max(...recent.map(x => x.high))
+    : null;
+  const recentLow = recent.length
+    ? Math.min(...recent.map(x => x.low))
+    : null;
+
+  return {
+    observationDate:last.date,
+
+    daily:
+      previous && previous.close
+        ? 100 * (last.close / previous.close - 1)
+        : null,
+
+    weekly:calendarReturn(series,{days:7}),
+    monthly:calendarReturn(series,{months:1}),
+    trailingYear:calendarReturn(series,{years:1}),
+
+    recentHigh,
+    recentLow,
+
+    drawdown:
+      Number.isFinite(recentHigh) && recentHigh !== 0
+        ? 100 * (last.close / recentHigh - 1)
+        : null,
+
+    firstDate:series[0]?.date ?? null,
+    lastDate:last.date,
+    dailyObservations:series.length
+  };
+}
+
 function currencyStrength(ccy,k=5,excludeCcy=null){
   const peers = CURRENCIES.filter(x => x !== ccy && x !== excludeCcy);
   const rs = [];
@@ -1399,6 +1474,7 @@ function renderPacket(x){
   const last = x.s.at(-1);
   const research = currentAroonResearch();
   const pr = getProfile(selectedPair);
+  const metrics = instrumentMetrics(selectedPair);
 
   const lines = [
     "FX Rotation Lab snapshot",
@@ -1413,6 +1489,16 @@ function renderPacket(x){
     "",
     "PAIR",
     `Rate: ${fmt(x.vals.at(-1),8)}`,
+    "",
+    "MARKET METRICS",
+    `Daily change: ${pct(metrics?.daily)}`,
+    `7-day change: ${pct(metrics?.weekly)}`,
+    `1-month change: ${pct(metrics?.monthly)}`,
+    `Trailing-12-month change: ${pct(metrics?.trailingYear)}`,
+    `Recent 20-observation high: ${fmt(metrics?.recentHigh,8)}`,
+    `Recent 20-observation low: ${fmt(metrics?.recentLow,8)}`,
+    `Drawdown from recent high: ${pct(metrics?.drawdown)}`,
+    `Daily coverage: ${metrics?.firstDate || "—"} → ${metrics?.lastDate || "—"}`,
     "",
     "INDICATORS",
     `Aroon(${x.p.aroon}): Up ${fmt(latestFinite(x.ar.up),1)} / Down ${fmt(latestFinite(x.ar.down),1)}`,
