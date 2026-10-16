@@ -611,7 +611,39 @@ function aggregateSeries(series, granularity){
   }));
 }
 
-function profileKey(pair){
+function instrumentProfileIdentity(id){
+  const instrument = INSTRUMENTS[id];
+
+  if(!instrument){
+    return `unknown:${id}`;
+  }
+
+  const venue =
+    instrument.venue ||
+    instrument.source ||
+    "no-venue";
+
+  const feed =
+    instrument.provider ||
+    "no-feed";
+
+  return [
+    instrument.assetClass,
+    instrument.id,
+    venue,
+    feed
+  ].map(encodeURIComponent).join(":");
+}
+
+function profileKey(id){
+  return (
+    `marketProfile:v1:` +
+    `${instrumentProfileIdentity(id)}:` +
+    `${selectedGranularity}`
+  );
+}
+
+function legacyFxProfileKey(pair){
   return `fxProfile:${pair}:${selectedGranularity}`;
 }
 
@@ -619,12 +651,48 @@ function defaultProfile(){
   return {aroon:25, stoch:14, smooth:3, er:20, locked:false, lockedAt:null};
 }
 
-function getProfile(pair){
+function readStoredProfile(key){
   try {
-    return {...defaultProfile(), ...JSON.parse(localStorage.getItem(profileKey(pair)) || "{}")};
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
   } catch {
-    return defaultProfile();
+    return null;
   }
+}
+
+function getProfile(id){
+  const current = readStoredProfile(profileKey(id));
+
+  if(current){
+    return {
+      ...defaultProfile(),
+      ...current
+    };
+  }
+
+  const instrument = INSTRUMENTS[id];
+
+  if(instrument?.assetClass === "fx"){
+    const legacy = readStoredProfile(
+      legacyFxProfileKey(id)
+    );
+
+    if(legacy){
+      return {
+        ...defaultProfile(),
+        ...legacy
+      };
+    }
+  }
+
+  return defaultProfile();
+}
+
+function storeProfile(id,profile){
+  localStorage.setItem(
+    profileKey(id),
+    JSON.stringify(profile)
+  );
 }
 
 function readControls(){
@@ -765,7 +833,7 @@ function saveProfile(lock=false){
     locked: lock,
     lockedAt: lock ? new Date().toISOString() : null
   };
-  localStorage.setItem(profileKey(selectedPair), JSON.stringify(p));
+  storeProfile(selectedPair,p);
   applyProfile();
   safeFetchData();
   return true;
@@ -1302,7 +1370,10 @@ $("saveProfileBtn").addEventListener("click",() => saveProfile(false));
 $("resetProfileBtn").addEventListener("click",() => {
   const p = getProfile(selectedPair);
   if(p.locked) return;
-  localStorage.setItem(profileKey(selectedPair), JSON.stringify(defaultProfile()));
+  storeProfile(
+    selectedPair,
+    defaultProfile()
+  );
   applyProfile();
   safeFetchData();
 });
@@ -1311,11 +1382,11 @@ $("lockProfileBtn").addEventListener("click",() => {
   const p = getProfile(selectedPair);
 
   if(p.locked){
-    localStorage.setItem(profileKey(selectedPair),JSON.stringify({
+    storeProfile(selectedPair,{
       ...p,
       locked:false,
       lockedAt:null
-    }));
+    });
     applyProfile();
     render();
   } else {
