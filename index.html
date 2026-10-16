@@ -274,7 +274,70 @@
 </main>
 
 <script>
-const PAIRS = ["USD/CHF","USD/EUR","USD/JPY","EUR/CHF","EUR/JPY","CHF/JPY"];
+const INSTRUMENTS = {
+  "USD/CHF": {
+    id:"USD/CHF",
+    assetClass:"fx",
+    base:"USD",
+    quote:"CHF",
+    source:"ECB",
+    provider:"Frankfurter",
+    venue:null,
+    volumeUnit:null
+  },
+  "USD/EUR": {
+    id:"USD/EUR",
+    assetClass:"fx",
+    base:"USD",
+    quote:"EUR",
+    source:"ECB",
+    provider:"Frankfurter",
+    venue:null,
+    volumeUnit:null
+  },
+  "USD/JPY": {
+    id:"USD/JPY",
+    assetClass:"fx",
+    base:"USD",
+    quote:"JPY",
+    source:"ECB",
+    provider:"Frankfurter",
+    venue:null,
+    volumeUnit:null
+  },
+  "EUR/CHF": {
+    id:"EUR/CHF",
+    assetClass:"fx",
+    base:"EUR",
+    quote:"CHF",
+    source:"ECB",
+    provider:"Frankfurter",
+    venue:null,
+    volumeUnit:null
+  },
+  "EUR/JPY": {
+    id:"EUR/JPY",
+    assetClass:"fx",
+    base:"EUR",
+    quote:"JPY",
+    source:"ECB",
+    provider:"Frankfurter",
+    venue:null,
+    volumeUnit:null
+  },
+  "CHF/JPY": {
+    id:"CHF/JPY",
+    assetClass:"fx",
+    base:"CHF",
+    quote:"JPY",
+    source:"ECB",
+    provider:"Frankfurter",
+    venue:null,
+    volumeUnit:null
+  }
+};
+
+const PAIRS = Object.keys(INSTRUMENTS);
 const CURRENCIES = ["EUR","USD","CHF","JPY"];
 const AROON_RESEARCH_URL =
   "backoffice/artifacts/aroon_web_2025-12-31.json";
@@ -327,6 +390,24 @@ function cross(row, pair){
   return rateFromEur(row, quote) / rateFromEur(row, base);
 }
 
+function fxDailyBar(row, pair){
+  const value = cross(row,pair);
+
+  return {
+    date:row.date,
+    startDate:row.date,
+    open:value,
+    high:value,
+    low:value,
+    close:value,
+    value,
+    volume:null,
+    volumeUnit:null,
+    observations:1,
+    provisional:false
+  };
+}
+
 function latestFinite(arr){
   for(let i=arr.length-1;i>=0;i--) if(Number.isFinite(arr[i])) return arr[i];
   return null;
@@ -376,8 +457,9 @@ async function fetchData(){
   if(!normalized.length) throw new Error("No synchronized observations returned");
 
   const nextSeries = {};
+
   for(const p of PAIRS){
-    nextSeries[p] = normalized.map(r => ({date:r.date,value:cross(r,p)}));
+    nextSeries[p] = normalized.map(r => fxDailyBar(r,p));
   }
 
   rawSeries = nextSeries;
@@ -466,15 +548,11 @@ function periodIsComplete(dateString, granularity){
 function aggregateSeries(series, granularity){
   if(granularity === "1D"){
     return series.map(x => ({
-      date:x.date,
-      startDate:x.date,
-      open:x.value,
-      high:x.value,
-      low:x.value,
-      close:x.value,
-      value:x.value,
-      observations:1,
-      provisional:false
+      ...x,
+      startDate:x.startDate ?? x.date,
+      value:x.close,
+      observations:x.observations ?? 1,
+      provisional:Boolean(x.provisional)
     }));
   }
 
@@ -488,21 +566,33 @@ function aggregateSeries(series, granularity){
         key,
         startDate:point.date,
         endDate:point.date,
-        open:point.value,
-        high:point.value,
-        low:point.value,
-        close:point.value,
-        observations:1
+        open:point.open,
+        high:point.high,
+        low:point.low,
+        close:point.close,
+        volume:Number.isFinite(point.volume) ? point.volume : null,
+        volumeUnit:point.volumeUnit ?? null,
+        volumeObservations:Number.isFinite(point.volume) ? 1 : 0,
+        observations:point.observations ?? 1
       });
       continue;
     }
 
     const bucket = buckets.get(key);
     bucket.endDate = point.date;
-    bucket.high = Math.max(bucket.high,point.value);
-    bucket.low = Math.min(bucket.low,point.value);
-    bucket.close = point.value;
-    bucket.observations += 1;
+    bucket.high = Math.max(bucket.high,point.high);
+    bucket.low = Math.min(bucket.low,point.low);
+    bucket.close = point.close;
+    bucket.observations += point.observations ?? 1;
+
+    if(Number.isFinite(point.volume)){
+      bucket.volume =
+        Number.isFinite(bucket.volume)
+          ? bucket.volume + point.volume
+          : point.volume;
+
+      bucket.volumeObservations += 1;
+    }
   }
 
   return [...buckets.values()].map(x => ({
@@ -513,6 +603,9 @@ function aggregateSeries(series, granularity){
     low:x.low,
     close:x.close,
     value:x.close,
+    volume:x.volume,
+    volumeUnit:x.volumeUnit,
+    volumeObservations:x.volumeObservations,
     observations:x.observations,
     provisional: !periodIsComplete(x.endDate, granularity)
   }));
