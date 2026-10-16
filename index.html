@@ -348,6 +348,8 @@ let selectedGranularity = "1D";
 let rawSeries = {};
 let selectedPair = "USD/CHF";
 let charts = {};
+let linkedCursorIndex = null;
+let linkedCursorPinned = false;
 let lastFetchAt = null;
 
 const GRANULARITY_DAYS_PER_PERIOD = {
@@ -964,9 +966,74 @@ function renderContext(){
   ).join("");
 }
 
+function redrawCharts(){
+  Object.values(charts).forEach(chart => chart?.draw());
+}
+
+function setLinkedCursor(index,{pinned=linkedCursorPinned}={}){
+  linkedCursorIndex = Number.isInteger(index) ? index : null;
+  linkedCursorPinned = Boolean(
+    pinned && linkedCursorIndex !== null
+  );
+  redrawCharts();
+}
+
+const linkedCursorPlugin = {
+  id:"linkedCursor",
+
+  afterDraw(chart){
+    if(!Number.isInteger(linkedCursorIndex)) return;
+
+    const x = chart.scales.x;
+    const area = chart.chartArea;
+    if(!x || !area) return;
+
+    const xPixel = x.getPixelForValue(linkedCursorIndex);
+    if(!Number.isFinite(xPixel)) return;
+
+    const ctx = chart.ctx;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(
+      area.left,
+      area.top,
+      area.right - area.left,
+      area.bottom - area.top
+    );
+    ctx.clip();
+
+    ctx.beginPath();
+    ctx.moveTo(xPixel,area.top);
+    ctx.lineTo(xPixel,area.bottom);
+
+    ctx.lineWidth = linkedCursorPinned ? 1.5 : 1;
+    ctx.strokeStyle = linkedCursorPinned
+      ? "rgba(234,240,247,.82)"
+      : "rgba(203,213,225,.52)";
+
+    ctx.setLineDash(
+      linkedCursorPinned ? [] : [4,4]
+    );
+
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
+Chart.register(linkedCursorPlugin);
+
 function replaceChart(key,canvasId,config){
   if(charts[key]) charts[key].destroy();
-  charts[key] = new Chart($(canvasId),config);
+
+  const canvas = $(canvasId);
+  charts[key] = new Chart(canvas,config);
+
+  canvas.onmouseleave = () => {
+    if(!linkedCursorPinned){
+      setLinkedCursor(null,{pinned:false});
+    }
+  };
 }
 
 function baseOptions(yMin=null,yMax=null,yTitle=""){
@@ -985,6 +1052,31 @@ function baseOptions(yMin=null,yMax=null,yTitle=""){
     animation:false,
     resizeDelay:100,
     interaction:{mode:"index",intersect:false},
+    onHover(event,active){
+      if(linkedCursorPinned) return;
+
+      const index = active?.[0]?.index;
+
+      setLinkedCursor(
+        Number.isInteger(index) ? index : null,
+        {pinned:false}
+      );
+    },
+
+    onClick(event,active){
+      const index = active?.[0]?.index;
+      if(!Number.isInteger(index)) return;
+
+      if(
+        linkedCursorPinned &&
+        linkedCursorIndex === index
+      ){
+        setLinkedCursor(index,{pinned:false});
+        return;
+      }
+
+      setLinkedCursor(index,{pinned:true});
+    },
     plugins:{
       legend:{labels:{color:"#cbd5e1",usePointStyle:true,boxWidth:8}},
       tooltip:{displayColors:true}
@@ -1108,6 +1200,9 @@ const coarsePricePlugin = {
 function renderCharts(){
   const p = readControls();
   if(!p) return null;
+
+  linkedCursorIndex = null;
+  linkedCursorPinned = false;
 
   const full = aggregateSeries(
     rawSeries[selectedPair] || [],
